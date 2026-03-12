@@ -897,7 +897,7 @@ const EMO = {
 // MAP INIT
 // ══════════════════════════════════
 const M = L.map('map',{zoomControl:false}).setView([-7.0051,110.4381],13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(M);
+var TILE = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(M);
 
 // ══════════════════════════════════
 // DATA
@@ -1144,6 +1144,8 @@ function renderMarkers(data) {
     const adminBtns = isAdmin() ? `<div style="display:flex;gap:6px;margin-top:10px"><button onclick="editListing(${p.id})" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;background:#E3F2FD;color:#1565C0;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">✏️ Edit</button><button onclick="confirmDelete(${p.id})" style="padding:7px 12px;border-radius:6px;border:none;cursor:pointer;background:#FFEBEE;color:#C62828;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">🗑️</button></div>` : '';
     if (!isMobile()) {
       mk.bindPopup(`<div class="prop-popup">${ph}<div class="pp-body"><div class="pp-bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div><div class="pp-code">📋 ${p.kode}</div><div class="pp-name">${p.nama}</div><div class="pp-loc">📍 ${p.alamat}</div>${specs.length?`<div class="pp-specs">${specs.join('')}</div>`:''}<div class="pp-price"><div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div><div class="pp-pv">${fmtH(p.harga)}</div>${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}</div>${p.desc?`<div style="margin-top:6px;font-size:10px;color:#546E8A">${p.desc}</div>`:''}${adminBtns}</div></div>`,{maxWidth:285});
+    } else {
+      mk.bindPopup(`<div class="prop-popup">${ph}<div class="pp-body"><div class="pp-bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div><div class="pp-code">📋 ${p.kode}</div><div class="pp-name">${p.nama}</div><div class="pp-loc">📍 ${p.alamat}</div>${specs.length?`<div class="pp-specs">${specs.join('')}</div>`:''}<div class="pp-price"><div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div><div class="pp-pv">${fmtH(p.harga)}</div>${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}</div>${p.desc?`<div style="margin-top:6px;font-size:10px;color:#546E8A">${p.desc}</div>`:''}${adminBtns}</div></div>`,{maxWidth:260});
     }
     mk.on('click', () => {
       hlCard(p.id);
@@ -1533,17 +1535,15 @@ function saveComp(){
 // ══════════════════════════════════
 function myLoc(){if(!navigator.geolocation){toast('Geolokasi tidak didukung');return;}navigator.geolocation.getCurrentPosition(p=>{M.flyTo([p.coords.latitude,p.coords.longitude],15);toast('📍 Pindah ke lokasi Anda');},()=>toast('⚠️ Gagal mendapatkan lokasi'));}
 function dlMap(){
-  toast('📥 Menyiapkan screenshot...');
-  M.invalidateSize();
-  setTimeout(function(){
-    html2canvas(document.getElementById('map'),{useCORS:true,allowTaint:true,scale:1,width:document.getElementById('map').offsetWidth,height:document.getElementById('map').offsetHeight}).then(function(c){
-      const a=document.createElement('a');
-      a.download='PropMap_'+new Date().toISOString().slice(0,10)+'.jpg';
-      a.href=c.toDataURL('image/jpeg',0.82);
-      a.click();
-      toast('✅ Screenshot berhasil!');
-    }).catch(function(){toast('⚠️ Gagal screenshot');});
-  },400);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  if (isIOS) {
+    toast('📸 Tekan tombol Power + Volume Up untuk screenshot');
+  } else if (isAndroid) {
+    toast('📸 Tekan Power + Volume Bawah untuk screenshot');
+  } else {
+    toast('📸 Tekan PrtScn atau Snipping Tool untuk screenshot');
+  }
 }
 
 // ══════════════════════════════════
@@ -1568,6 +1568,8 @@ function mnavSwitch(tab) {
     closeMobileSheet();
   } else {
     panel.classList.remove('open');
+    // Invalidate map setelah panel menutup agar klik pin normal kembali
+    setTimeout(function(){ M.invalidateSize(); }, 320);
   }
 }
 
@@ -1665,7 +1667,7 @@ function renderMobileList(data) {
              onerror="this.parentElement.innerHTML='<span style=\\'font-size:24px;display:flex;align-items:center;justify-content:center;height:100%\\'>${EMO[p.type]||'🏠'}</span>'">
          </div>`
       : `<div style="width:100%;aspect-ratio:16/9;background:${col}15;display:flex;align-items:center;justify-content:center;font-size:32px">${EMO[p.type]||'🏠'}</div>`;
-    return `<div class="lcard" onclick="mnavSwitch('map');flyTo(${p.id});setTimeout(()=>openMobileSheet(DATA.find(x=>x.id===${p.id})),600)">
+    return `<div class="lcard" onclick="mnavSwitch('map');setTimeout(function(){flyTo(${p.id});setTimeout(function(){var mk=MKS.find(function(x){return x.id===${p.id}});if(mk)mk.mk.openPopup();},800)},350)">
       ${thumbContent}
       <div class="lcard-row">
         <div class="lcard-body">
