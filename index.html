@@ -222,7 +222,16 @@ select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(25,1
 .empty-state button{margin-top:10px;padding:7px 16px;border-radius:var(--r-sm);border:1.5px solid var(--g200);cursor:pointer;background:var(--white);color:var(--blue-mid);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;transition:all .2s}
 .empty-state button:hover{background:var(--sky);border-color:var(--blue-light)}
 
-/* ── LISTING CARD ACTION BUTTONS ── */
+/* ── FOTO LOADING SPINNER ── */
+.foto-wrap{position:relative;overflow:hidden;background:var(--g100)}
+.foto-wrap .foto-spinner{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--g100);z-index:1;transition:opacity .3s;
+}
+.foto-wrap .foto-spinner .spin{width:24px;height:24px;border-width:2px}
+.foto-wrap img{position:relative;z-index:0;transition:opacity .3s;opacity:0}
+.foto-wrap img.loaded{opacity:1}
+.foto-wrap.done .foto-spinner{opacity:0;pointer-events:none}
 .lcard-actions{display:flex;gap:4px;margin-top:5px}
 .lcard-btn{padding:3px 9px;border-radius:6px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;transition:all .15s}
 .lcard-btn-edit{background:var(--sky);color:var(--blue-mid)}
@@ -318,6 +327,92 @@ select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(25,1
 /* hide admin-only elements in viewer mode */
 .admin-only{display:flex}
 body.viewer-mode .admin-only{display:none!important}
+/* ══════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════ */
+
+/* ── MOBILE BOTTOM NAV ── */
+#mobile-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:800;
+  background:var(--white);border-top:1px solid var(--g200);
+  box-shadow:0 -4px 16px rgba(13,43,85,.12);height:58px;
+}
+.mnav-inner{display:flex;height:100%;align-items:center;justify-content:center;gap:4px;padding:0 8px}
+.mnav-btn{
+  flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;border:none;background:none;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;
+  color:var(--g400);transition:all .2s;padding:6px 4px;border-radius:10px;
+}
+.mnav-btn .mico{font-size:22px;line-height:1}
+.mnav-btn.active{color:var(--blue-mid);background:var(--sky)}
+.mnav-btn.active .mico{transform:scale(1.12)}
+.mnav-btn-add{background:var(--accent)!important;border-radius:50%;width:46px;height:46px;
+  margin-top:-12px;box-shadow:0 4px 14px rgba(0,188,212,.45);color:var(--navy)!important;
+  flex:none;max-width:46px;padding:0}
+.mnav-btn-add .mico{font-size:24px}
+
+/* ── MOBILE LIST PANEL ── */
+#mobile-list-panel{
+  display:none;position:fixed;inset:56px 0 58px 0;z-index:700;
+  background:var(--white);overflow-y:auto;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+#mobile-list-panel.open{transform:translateX(0)}
+.mob-list-header{
+  padding:12px 16px 8px;background:linear-gradient(180deg,var(--sky),var(--white));
+  border-bottom:1px solid var(--sky-mid);position:sticky;top:0;z-index:1;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.mob-list-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+
+/* ── MOBILE BOTTOM SHEET ── */
+#mobile-sheet{
+  display:none;position:fixed;bottom:58px;left:0;right:0;z-index:750;
+  background:var(--white);border-radius:var(--r-xl) var(--r-xl) 0 0;
+  box-shadow:0 -8px 32px rgba(13,43,85,.18);
+  transform:translateY(110%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  max-height:78vh;overflow-y:auto;
+}
+#mobile-sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;background:var(--g200);border-radius:2px;margin:10px auto 4px}
+.sheet-close-btn{position:absolute;top:10px;right:14px;background:var(--g100);border:none;
+  border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;color:var(--g600)}
+.sheet-body{padding:0 16px 24px}
+
+/* ── MOBILE MEDIA QUERY ── */
+@media(max-width:768px){
+  #mobile-nav{display:flex}
+  #mobile-list-panel{display:block}
+  #mobile-sheet{display:block}
+
+  #topbar{padding:0 12px;gap:8px;height:56px}
+  .logo-sub{display:none}
+  .logo-text{font-size:15px}
+  .logo-ico{width:30px;height:30px;font-size:14px}
+  .tb-search-wrap{max-width:none}
+  .topbar-actions{display:none}
+
+  #body{flex-direction:column}
+  #sidebar{display:none!important}
+  #map-container{flex:1}
+  #map{height:calc(100vh - 56px - 58px)}
+
+  #fab-area{top:8px;right:8px}
+  #sb-toggle{display:none}
+  #legend{display:none}
+
+  .modal{width:100%;max-width:100%;border-radius:var(--r-xl) var(--r-xl) 0 0;
+    position:fixed;bottom:58px;left:0;right:0;max-height:88vh}
+  .modal-ov{align-items:flex-end}
+
+  #adv-panel{max-height:80vh}
+  .adv-grid{grid-template-columns:1fr 1fr}
+  .adv-inner{padding:20px 16px 20px}
+}
+
+/* ── TOAST ── */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);color:#fff;padding:9px 18px;border-radius:var(--r-md);font-size:12px;font-weight:600;box-shadow:var(--sh-lg);z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
 #toast.show{transform:translateX(-50%) translateY(0)}
 
@@ -728,6 +823,54 @@ body.viewer-mode .admin-only{display:none!important}
   </div>
 </div>
 
+<!-- ══ MOBILE BOTTOM NAV ══ -->
+<div id="mobile-nav">
+  <div class="mnav-inner">
+    <button class="mnav-btn active" id="mnav-map" onclick="mnavSwitch('map')">
+      <span class="mico">🗺️</span>Peta
+    </button>
+    <button class="mnav-btn" id="mnav-list" onclick="mnavSwitch('list')">
+      <span class="mico">🏠</span>Listing
+    </button>
+    <button class="mnav-btn mnav-btn-add admin-only" onclick="openMod('listing')" title="Tambah">
+      <span class="mico">＋</span>
+    </button>
+    <button class="mnav-btn" id="mnav-filter" onclick="toggleAdv()">
+      <span class="mico">⚙️</span>Filter
+    </button>
+    <button class="mnav-btn" id="mnav-dl" onclick="dlMap()">
+      <span class="mico">📥</span>Download
+    </button>
+  </div>
+</div>
+
+<!-- ══ MOBILE LIST PANEL ══ -->
+<div id="mobile-list-panel">
+  <div class="mob-list-header">
+    <div class="sb-count" id="sc-mob">0 <span>properti</span></div>
+    <div class="sb-sort">
+      <label style="font-size:10px;color:var(--g600);font-weight:600">Urut:</label>
+      <select id="sb-sort-sel-mob" onchange="syncSort(this.value)" style="font-size:10px;padding:4px 22px 4px 7px;border:1.5px solid var(--g200);border-radius:6px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--g800);background:var(--white);appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%2390A4C0' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 6px center;outline:none">
+        <option value="default">Default</option>
+        <option value="harga-asc">Harga ↑</option>
+        <option value="harga-desc">Harga ↓</option>
+        <option value="lt-desc">L. Tanah ↓</option>
+        <option value="lb-desc">L. Bgn ↓</option>
+        <option value="nama">Nama A-Z</option>
+      </select>
+    </div>
+  </div>
+  <div id="filter-chips-mob" style="padding:8px 14px 0;display:flex;flex-wrap:wrap;gap:5px"></div>
+  <div class="mob-list-body" id="mob-listing-list"></div>
+</div>
+
+<!-- ══ MOBILE BOTTOM SHEET ══ -->
+<div id="mobile-sheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close-btn" onclick="closeMobileSheet()">✕</button>
+  <div class="sheet-body" id="mobile-sheet-body"></div>
+</div>
+
 <div id="load-ov" class="h"><div class="spin"></div><div style="font-size:13px;font-weight:600">Memproses...</div></div>
 <div id="toast"></div>
 
@@ -914,6 +1057,7 @@ function sortAndRenderWith(data) {
   if (sort === 'nama')       sorted.sort((a,b) => a.nama.localeCompare(b.nama));
   renderMarkers(sorted);
   renderList(sorted);
+  renderMobileList(sorted);
   buildLeg(sorted);
 }
 
@@ -982,7 +1126,12 @@ function renderMarkers(data) {
     const isC = p.src==='competitor';
     const mk = L.marker(c,{icon:mkPin(col,isC)}).addTo(M);
     const ph = p.foto
-      ? `<div class="pp-img"><img src="${p.foto}" alt="${p.nama}" onerror="this.parentElement.innerHTML='${EMO[p.type]||'🏠'}'"></div>`
+      ? `<div class="foto-wrap pp-img">
+           <div class="foto-spinner"><div class="spin"></div></div>
+           <img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;position:relative;z-index:0"
+             onload="this.classList.add('loaded');this.parentElement.classList.add('done')"
+             onerror="this.parentElement.innerHTML='${EMO[p.type]||'🏠'}'">
+         </div>`
       : `<div class="pp-img">${EMO[p.type]||'🏠'}</div>`;
     const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">🟢 Dijual</span>` : `<span class="bdg bdg-sewa">🟠 Disewakan</span>`;
     const specs = [];
@@ -993,8 +1142,12 @@ function renderMarkers(data) {
     if(p.garasi) specs.push(`<div class="spec-i"><div class="spec-l">Garasi</div><div class="spec-v">${p.garasi}</div></div>`);
     if(p.lantai) specs.push(`<div class="spec-i"><div class="spec-l">Lantai</div><div class="spec-v">${p.lantai}</div></div>`);
     const adminBtns = isAdmin() ? `<div style="display:flex;gap:6px;margin-top:10px"><button onclick="editListing(${p.id})" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;background:#E3F2FD;color:#1565C0;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">✏️ Edit</button><button onclick="confirmDelete(${p.id})" style="padding:7px 12px;border-radius:6px;border:none;cursor:pointer;background:#FFEBEE;color:#C62828;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">🗑️</button></div>` : '';
-    mk.bindPopup(`<div class="prop-popup">${ph}<div class="pp-body"><div class="pp-bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div><div class="pp-code">📋 ${p.kode}</div><div class="pp-name">${p.nama}</div><div class="pp-loc">📍 ${p.alamat}</div>${specs.length?`<div class="pp-specs">${specs.join('')}</div>`:''}<div class="pp-price"><div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div><div class="pp-pv">${fmtH(p.harga)}</div>${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}</div>${p.desc?`<div style="margin-top:6px;font-size:10px;color:#546E8A">${p.desc}</div>`:''}${adminBtns}</div></div>`,{maxWidth:285});
-    mk.on('click',()=>hlCard(p.id));
+    if (!isMobile()) {
+      mk.bindPopup(`<div class="prop-popup">${ph}<div class="pp-body"><div class="pp-bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div><div class="pp-code">📋 ${p.kode}</div><div class="pp-name">${p.nama}</div><div class="pp-loc">📍 ${p.alamat}</div>${specs.length?`<div class="pp-specs">${specs.join('')}</div>`:''}<div class="pp-price"><div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div><div class="pp-pv">${fmtH(p.harga)}</div>${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}</div>${p.desc?`<div style="margin-top:6px;font-size:10px;color:#546E8A">${p.desc}</div>`:''}${adminBtns}</div></div>`,{maxWidth:285});
+    }
+    mk.on('click', () => {
+      hlCard(p.id);
+    });
     MKS.push({id:p.id,mk});
   });
   document.getElementById('sc').innerHTML = `${data.length} <span>properti</span>`;
@@ -1014,7 +1167,12 @@ function renderList(data) {
     const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">Dijual</span>` : `<span class="bdg bdg-sewa">Disewakan</span>`;
     const srcB = p.src==='competitor' ? `<span class="bdg bdg-comp">Komp.</span>` : '';
     const thumbContent = p.foto
-      ? `<img src="${p.foto}" alt="${p.nama}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:28px\\'>${EMO[p.type]||'🏠'}</span>'">`
+      ? `<div class="foto-wrap" style="width:100%;aspect-ratio:16/9">
+           <div class="foto-spinner"><div class="spin"></div></div>
+           <img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover"
+             onload="this.classList.add('loaded');this.parentElement.classList.add('done')"
+             onerror="this.parentElement.innerHTML='<span style=\\'font-size:28px;display:flex;align-items:center;justify-content:center;height:100%\\'>${EMO[p.type]||'🏠'}</span>'">
+         </div>`
       : `<span style="font-size:28px">${EMO[p.type]||'🏠'}</span>`;
     return `<div class="lcard" id="c${p.id}">
       <div class="lcard-thumb" style="background:${col}15" onclick="flyTo(${p.id})">${thumbContent}</div>
@@ -1393,6 +1551,149 @@ function dlMap(){
 // ══════════════════════════════════
 let tt;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ══════════════════════════════════
+// MOBILE FUNCTIONS
+// ══════════════════════════════════
+function isMobile(){ return window.innerWidth <= 768; }
+
+function mnavSwitch(tab) {
+  document.querySelectorAll('.mnav-btn[id^="mnav-"]').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('mnav-'+tab);
+  if (btn) btn.classList.add('active');
+
+  const panel = document.getElementById('mobile-list-panel');
+  if (tab === 'list') {
+    panel.classList.add('open');
+    closeMobileSheet();
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function mnavMore() {
+  // Show a mini menu for Download, Kompetitor, Logout
+  const existing = document.getElementById('mnav-more-menu');
+  if (existing) { existing.remove(); return; }
+
+  const menu = document.createElement('div');
+  menu.id = 'mnav-more-menu';
+  menu.style.cssText = 'position:fixed;bottom:66px;right:8px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(13,43,85,.18);border:1px solid var(--g200);z-index:900;overflow:hidden;min-width:160px';
+  const items = [
+    { label:'📥 Download Peta', fn:'dlMap()' },
+    { label:'🏢 Data Kompetitor', fn:"openMod('competitor')", adminOnly: true },
+    { label:'🚪 Logout Admin', fn:'logoutAdmin()', adminOnly: true },
+  ];
+  menu.innerHTML = items.map(it => {
+    if (it.adminOnly && !isAdmin()) return '';
+    return `<button onclick="${it.fn};document.getElementById('mnav-more-menu')?.remove()" style="display:block;width:100%;padding:12px 16px;border:none;background:none;text-align:left;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;border-bottom:1px solid var(--g100)">${it.label}</button>`;
+  }).join('');
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', function rm(e){ if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',rm);} }), 100);
+}
+
+function openMobileSheet(p) {
+  if (!isMobile()) return;
+  const col = COLORS[p.type]||'#1565C0';
+  const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">🟢 Dijual</span>` : `<span class="bdg bdg-sewa">🟠 Disewakan</span>`;
+  const specs = [];
+  if(p.lt)     specs.push(`<div class="spec-i"><div class="spec-l">L.Tanah</div><div class="spec-v">${p.lt}m²</div></div>`);
+  if(p.lb)     specs.push(`<div class="spec-i"><div class="spec-l">L.Bgn</div><div class="spec-v">${p.lb}m²</div></div>`);
+  if(p.kt)     specs.push(`<div class="spec-i"><div class="spec-l">KT</div><div class="spec-v">${p.kt}</div></div>`);
+  if(p.km)     specs.push(`<div class="spec-i"><div class="spec-l">KM</div><div class="spec-v">${p.km}</div></div>`);
+  if(p.garasi) specs.push(`<div class="spec-i"><div class="spec-l">Garasi</div><div class="spec-v">${p.garasi}</div></div>`);
+  if(p.lantai) specs.push(`<div class="spec-i"><div class="spec-l">Lantai</div><div class="spec-v">${p.lantai}</div></div>`);
+
+  const fotoHtml = p.foto
+    ? `<div class="foto-wrap" style="width:100%;aspect-ratio:16/9;border-radius:var(--r-md);overflow:hidden;margin-bottom:12px">
+         <div class="foto-spinner"><div class="spin"></div></div>
+         <img src="${p.foto}" style="width:100%;height:100%;object-fit:cover"
+           onload="this.classList.add('loaded');this.parentElement.classList.add('done')"
+           onerror="this.parentElement.style.display='none'">
+       </div>`
+    : '';
+
+  const adminBtns = isAdmin()
+    ? `<div style="display:flex;gap:8px;margin-top:12px">
+         <button onclick="closeMobileSheet();editListing(${p.id})" style="flex:1;padding:10px;border-radius:var(--r-sm);border:none;cursor:pointer;background:#E3F2FD;color:#1565C0;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">✏️ Edit</button>
+         <button onclick="closeMobileSheet();confirmDelete(${p.id})" style="padding:10px 16px;border-radius:var(--r-sm);border:none;cursor:pointer;background:#FFEBEE;color:#C62828;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">🗑️</button>
+       </div>`
+    : '';
+
+  document.getElementById('mobile-sheet-body').innerHTML = `
+    ${fotoHtml}
+    <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap">
+      <span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}
+    </div>
+    <div style="font-size:9px;color:var(--g400);font-weight:600;font-family:'Space Grotesk',sans-serif">📋 ${p.kode}</div>
+    <div style="font-size:16px;font-weight:800;color:var(--navy);margin:4px 0 2px">${p.nama}</div>
+    <div style="font-size:11px;color:var(--g600);margin-bottom:10px">📍 ${p.alamat}</div>
+    ${specs.length ? `<div class="pp-specs" style="margin-bottom:10px">${specs.join('')}</div>` : ''}
+    <div class="pp-price" style="border-radius:var(--r-sm)">
+      <div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div>
+      <div class="pp-pv">${fmtH(p.harga)}</div>
+      ${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}
+    </div>
+    ${p.desc?`<div style="margin-top:8px;font-size:11px;color:#546E8A;line-height:1.5">${p.desc}</div>`:''}
+    ${adminBtns}
+  `;
+  document.getElementById('mobile-sheet').classList.add('open');
+  mnavSwitch('map'); // pastikan kembali ke tab peta
+}
+
+function closeMobileSheet() {
+  document.getElementById('mobile-sheet').classList.remove('open');
+}
+
+function renderMobileList(data) {
+  if (!isMobile()) return;
+  const el = document.getElementById('mob-listing-list');
+  const sc = document.getElementById('sc-mob');
+  if (sc) sc.innerHTML = `${data.length} <span>properti</span>`;
+  if (data.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">🔍</div><div class="et">Tidak ada properti</div><button onclick="resetAdvanced();clearGlobalSearch()">↺ Reset Filter</button></div>`;
+    return;
+  }
+  el.innerHTML = data.map(p => {
+    const col = COLORS[p.type]||'#1565C0';
+    const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">Dijual</span>` : `<span class="bdg bdg-sewa">Disewakan</span>`;
+    const thumbContent = p.foto
+      ? `<div class="foto-wrap" style="width:100%;aspect-ratio:16/9">
+           <div class="foto-spinner"><div class="spin"></div></div>
+           <img src="${p.foto}" style="width:100%;height:100%;object-fit:cover"
+             onload="this.classList.add('loaded');this.parentElement.classList.add('done')"
+             onerror="this.parentElement.innerHTML='<span style=\\'font-size:24px;display:flex;align-items:center;justify-content:center;height:100%\\'>${EMO[p.type]||'🏠'}</span>'">
+         </div>`
+      : `<div style="width:100%;aspect-ratio:16/9;background:${col}15;display:flex;align-items:center;justify-content:center;font-size:32px">${EMO[p.type]||'🏠'}</div>`;
+    return `<div class="lcard" onclick="mnavSwitch('map');flyTo(${p.id});setTimeout(()=>openMobileSheet(DATA.find(x=>x.id===${p.id})),600)">
+      ${thumbContent}
+      <div class="lcard-row">
+        <div class="lcard-body">
+          <div class="bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div>
+          <div class="lcard-code">${p.kode}</div>
+          <div class="lcard-name">${p.nama}</div>
+          <div class="lcard-loc">📍 ${p.alamat}</div>
+          <div class="lcard-price">${fmtH(p.harga,p.hket)}</div>
+        </div>
+        ${isAdmin() ? `<div style="display:flex;flex-direction:column;justify-content:center;gap:4px;padding:8px 8px 8px 0;flex-shrink:0">
+          <button class="lcard-btn lcard-btn-edit" onclick="event.stopPropagation();editListing(${p.id})">✏️</button>
+          <button class="lcard-btn lcard-btn-del" onclick="event.stopPropagation();confirmDelete(${p.id})">🗑️</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function syncSort(val) {
+  document.getElementById('sb-sort-sel').value = val;
+  sortAndRender();
+}
+
+window.mnavSwitch       = mnavSwitch;
+window.mnavMore         = mnavMore;
+window.openMobileSheet  = openMobileSheet;
+window.closeMobileSheet = closeMobileSheet;
+window.syncSort         = syncSort;
 
 // ══════════════════════════════════
 // AUTH CONFIG — ganti sesuai kebutuhan
