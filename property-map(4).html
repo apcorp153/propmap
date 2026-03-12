@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PropMap — Property Map Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{
+  --navy:#0A1628;--blue-dark:#0D2B55;--blue-mid:#1565C0;--blue:#1976D2;--blue-light:#42A5F5;
+  --sky:#E3F2FD;--sky-mid:#BBDEFB;--accent:#00BCD4;--white:#FFFFFF;
+  --g50:#F8FAFC;--g100:#EFF3F8;--g200:#DDE4EE;--g300:#B0C4D8;--g400:#90A4C0;
+  --g600:#546E8A;--g800:#2C3E55;
+  --green:#2E7D32;--orange:#E65100;--red:#B71C1C;
+  --sh-sm:0 1px 4px rgba(13,43,85,.08);--sh-md:0 4px 16px rgba(13,43,85,.12);
+  --sh-lg:0 8px 32px rgba(13,43,85,.18);--sh-xl:0 16px 48px rgba(13,43,85,.22);
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(--g50);color:var(--g800);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* ── TOPBAR ── */
+#topbar{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--blue-dark) 65%,#0E3A72 100%);
+  color:#fff;height:60px;padding:0 20px;display:flex;align-items:center;gap:12px;
+  z-index:1000;box-shadow:0 2px 16px rgba(0,0,0,.25);flex-shrink:0
+}
+.logo-wrap{display:flex;align-items:center;gap:10px;min-width:160px}
+.logo-ico{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--blue-light));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 8px rgba(0,188,212,.35)}
+.logo-text{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;white-space:nowrap}
+.logo-sub{font-size:9px;opacity:.5;letter-spacing:.7px;text-transform:uppercase;margin-top:-2px}
+
+/* Global search bar in topbar */
+.tb-search-wrap{flex:1;max-width:480px;position:relative}
+.tb-search-wrap input{
+  width:100%;padding:9px 16px 9px 38px;border-radius:var(--r-md);border:none;
+  background:rgba(255,255,255,.12);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;outline:none;transition:all .25s;backdrop-filter:blur(4px);
+}
+.tb-search-wrap input::placeholder{color:rgba(255,255,255,.45)}
+.tb-search-wrap input:focus{background:rgba(255,255,255,.2);box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.tb-sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.6;pointer-events:none}
+.tb-search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:11px;display:none;align-items:center;justify-content:center}
+.tb-search-clear.vis{display:flex}
+
+.topbar-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+.btn-tb{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--r-sm);border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;transition:all .2s;white-space:nowrap}
+.btn-tb-primary{background:var(--accent);color:var(--navy)}
+.btn-tb-primary:hover{background:#00D4EF;transform:translateY(-1px)}
+.btn-tb-outline{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18)}
+.btn-tb-outline:hover{background:rgba(255,255,255,.18)}
+.btn-tb-ghost{background:transparent;color:rgba(255,255,255,.7)}
+.btn-tb-ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.btn-tb-adv{background:rgba(0,188,212,.18);color:var(--accent);border:1px solid rgba(0,188,212,.3)}
+.btn-tb-adv:hover{background:rgba(0,188,212,.28)}
+.btn-tb-adv.active-filter{background:var(--accent);color:var(--navy)}
+
+/* ── BODY ── */
+#body{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── SIDEBAR ── */
+#sidebar{width:296px;min-width:296px;background:var(--white);display:flex;flex-direction:column;border-right:1px solid var(--g200);box-shadow:2px 0 12px rgba(13,43,85,.07);z-index:100;overflow:hidden;transition:width .3s,min-width .3s}
+#sidebar.collapsed{width:0;min-width:0;border-right:none}
+
+.sb-header{padding:14px 16px 10px;background:linear-gradient(180deg,var(--sky),var(--white));border-bottom:1px solid var(--sky-mid);flex-shrink:0}
+.sb-stats{display:flex;align-items:center;justify-content:space-between}
+.sb-count{font-size:20px;font-weight:800;color:var(--navy)}
+.sb-count span{font-size:11px;font-weight:400;color:var(--g600)}
+.sb-sort{display:flex;align-items:center;gap:5px}
+.sb-sort label{font-size:10px;color:var(--g600);font-weight:600;white-space:nowrap}
+.sb-sort select{padding:4px 22px 4px 7px;border:1.5px solid var(--g200);border-radius:6px;font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--g800);background:var(--white);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%2390A4C0' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;outline:none}
+
+/* Active filter chips */
+#filter-chips{padding:8px 14px 0;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0}
+#filter-chips:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:var(--sky);border:1px solid var(--sky-mid);border-radius:20px;font-size:10px;font-weight:700;color:var(--blue-mid)}
+.chip button{background:none;border:none;cursor:pointer;color:var(--blue-mid);font-size:11px;padding:0;line-height:1;opacity:.7}
+.chip button:hover{opacity:1}
+.chip-clear-all{background:var(--navy)!important;color:#fff!important;border-color:var(--navy)!important}
+.chip-clear-all button{color:#fff!important}
+
+.sb-body{flex:1;overflow-y:auto;padding:12px}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-thumb{background:var(--g200);border-radius:3px}
+#listing-list{display:flex;flex-direction:column;gap:8px}
+
+/* ── LISTING CARD ── */
+.lcard{background:var(--white);border-radius:var(--r-md);border:1.5px solid var(--g200);overflow:hidden;cursor:pointer;transition:all .2s;display:flex;flex-direction:column}
+.lcard:hover{border-color:var(--blue-light);box-shadow:var(--sh-md);transform:translateY(-1px)}
+.lcard.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(25,118,210,.12)}
+.lcard-thumb{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px}
+.lcard-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lcard-row{display:flex;align-items:stretch}
+.lcard-body{flex:1;padding:9px 8px 9px 10px;min-width:0}
+.bdgs{display:flex;gap:3px;margin-bottom:4px;flex-wrap:wrap}
+.bdg{padding:1px 6px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.2px}
+.bdg-type{background:var(--sky);color:var(--blue-mid)}
+.bdg-jual{background:#E8F5E9;color:#2E7D32}
+.bdg-sewa{background:#FFF3E0;color:#E65100}
+.bdg-comp{background:#FFEBEE;color:#B71C1C}
+.lcard-code{font-size:9px;color:var(--g400);font-weight:600;font-family:'Space Grotesk',sans-serif}
+.lcard-name{font-size:12px;font-weight:700;color:var(--navy);margin:1px 0;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcard-loc{font-size:10px;color:var(--g600);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcard-price{font-size:12px;font-weight:800;color:var(--blue-mid)}
+
+/* ── ADVANCED SEARCH PANEL (overlay slide-down) ── */
+#adv-panel{
+  position:absolute;top:0;left:0;right:0;z-index:900;
+  background:var(--white);
+  border-bottom:1px solid var(--g200);
+  border-top:3px solid var(--accent);
+  box-shadow:0 8px 24px rgba(13,43,85,.15);
+  transform:translateY(-110%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  padding:0;
+  max-height:calc(100vh - 60px);
+  overflow-y:auto;
+}
+#adv-panel.open{transform:translateY(0)}
+
+.adv-inner{padding:70px 24px 24px}
+.adv-title{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.adv-close{background:var(--g100);border:1px solid var(--g200);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:11px;font-weight:600;color:var(--g600);transition:all .2s}
+.adv-close:hover{border-color:var(--blue);color:var(--blue)}
+
+.fg{display:flex;flex-direction:column;gap:4px}
+label{font-size:11px;font-weight:600;color:var(--g600);display:block}
+select,input[type=text],input[type=number]{
+  width:100%;padding:7px 10px;border:1.5px solid var(--g200);border-radius:var(--r-sm);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--g800);
+  background:var(--white);outline:none;transition:border-color .2s,box-shadow .2s;appearance:none
+}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2390A4C0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px}
+select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(25,118,210,.1)}
+.rrow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.range-label{font-size:10px;color:var(--g400);text-align:center;padding:2px 0}
+
+/* Harga shortcut buttons */
+.harga-shortcuts{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.hshort{padding:3px 9px;border-radius:20px;border:1px solid var(--g200);background:var(--g50);font-size:10px;font-weight:600;color:var(--g600);cursor:pointer;transition:all .15s}
+.hshort:hover,.hshort.active{background:var(--sky);border-color:var(--blue-light);color:var(--blue-mid)}
+
+.adv-actions{display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--g100)}
+.btn-apply{flex:1;padding:10px;border-radius:var(--r-sm);border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--blue-mid));color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;transition:all .2s;box-shadow:0 2px 8px rgba(21,101,192,.25)}
+.btn-apply:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.35)}
+.btn-reset-adv{padding:10px 18px;border-radius:var(--r-sm);border:1.5px solid var(--g200);cursor:pointer;background:var(--white);color:var(--g600);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;transition:all .2s}
+.btn-reset-adv:hover{border-color:var(--blue);color:var(--blue)}
+
+/* result count badge on adv button */
+.filter-badge{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:#ff4444;color:#fff;font-size:9px;font-weight:800;margin-left:2px}
+
+/* ── MAP ── */
+#map-container{flex:1;position:relative}
+#map{width:100%;height:100%}
+
+/* ── POPUP ── */
+.prop-popup{min-width:250px;max-width:285px;font-family:'Plus Jakarta Sans',sans-serif;border-radius:var(--r-lg);overflow:hidden}
+.pp-img{width:100%;aspect-ratio:16/9;background:var(--sky);display:flex;align-items:center;justify-content:center;font-size:38px;color:var(--g400);overflow:hidden}
+.pp-img img{width:100%;height:100%;object-fit:cover}
+.pp-body{padding:12px}
+.pp-bdgs{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.pp-code{font-size:9px;color:var(--g400);font-weight:600;font-family:'Space Grotesk',sans-serif;letter-spacing:.4px}
+.pp-name{font-size:13px;font-weight:800;color:var(--navy);margin:3px 0 2px}
+.pp-loc{font-size:10px;color:var(--g600);margin-bottom:7px}
+.pp-specs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
+.spec-i{background:var(--g50);border-radius:6px;padding:5px 8px}
+.spec-l{font-size:8px;color:var(--g400);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.spec-v{font-size:12px;font-weight:700;color:var(--navy)}
+.pp-price{padding:8px 10px;background:linear-gradient(135deg,var(--blue-dark),var(--blue-mid));border-radius:var(--r-sm);color:#fff}
+.pp-pl{font-size:9px;opacity:.7}
+.pp-pv{font-size:16px;font-weight:800}
+.pp-ps{font-size:9px;opacity:.7}
+
+/* ── LEGEND ── */
+#legend{position:absolute;bottom:18px;right:12px;z-index:500;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-radius:var(--r-md);padding:11px 13px;box-shadow:var(--sh-lg);border:1px solid var(--g200);min-width:165px}
+.leg-title{font-size:10px;font-weight:700;color:var(--blue-dark);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.leg-item{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;color:var(--g800);font-weight:500}
+.leg-pin{width:12px;height:12px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* ── FAB ── */
+#fab-area{position:absolute;top:12px;right:12px;z-index:500;display:flex;flex-direction:column;gap:6px}
+.fab{width:36px;height:36px;border-radius:var(--r-sm);border:none;cursor:pointer;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);color:var(--blue-dark);font-size:14px;box-shadow:var(--sh-md);transition:all .2s;display:flex;align-items:center;justify-content:center;border:1px solid var(--g200)}
+.fab:hover{background:var(--blue);color:#fff;transform:scale(1.08)}
+
+/* Sidebar toggle on map */
+#sb-toggle{position:absolute;top:12px;left:12px;z-index:500}
+.sb-tog-btn{width:36px;height:36px;border-radius:var(--r-sm);border:none;cursor:pointer;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);color:var(--blue-dark);font-size:16px;box-shadow:var(--sh-md);display:flex;align-items:center;justify-content:center;border:1px solid var(--g200);transition:all .2s}
+.sb-tog-btn:hover{background:var(--blue);color:#fff}
+
+/* ── MODALS ── */
+.modal-ov{position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--white);border-radius:var(--r-xl);width:90%;max-width:660px;max-height:88vh;overflow-y:auto;box-shadow:var(--sh-xl);transform:translateY(20px);transition:transform .25s;scrollbar-width:thin}
+.modal-ov.open .modal{transform:translateY(0)}
+.modal-hdr{padding:18px 20px 14px;background:linear-gradient(135deg,var(--navy),var(--blue-dark));color:#fff;border-radius:var(--r-xl) var(--r-xl) 0 0;display:flex;align-items:center;justify-content:space-between}
+.modal-hdr-title{font-size:15px;font-weight:800}
+.modal-x{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.modal-x:hover{background:rgba(255,255,255,.28)}
+.modal-bdy{padding:20px;display:flex;flex-direction:column;gap:13px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.coord-tip{font-size:10px;color:var(--g400);margin-top:2px}
+.modal-ftr{padding:0 20px 20px;display:flex;gap:8px;justify-content:flex-end}
+.btn-save{padding:9px 20px;border-radius:var(--r-sm);border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--blue-mid));color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;transition:all .2s;box-shadow:0 2px 8px rgba(21,101,192,.25)}
+.btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.35)}
+.btn-cancel{padding:9px 16px;border-radius:var(--r-sm);border:1.5px solid var(--g200);cursor:pointer;background:var(--white);color:var(--g600);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;transition:all .2s}
+.btn-cancel:hover{border-color:var(--blue);color:var(--blue)}
+.mtabs{display:flex;gap:2px;padding:3px;background:var(--g100);border-radius:var(--r-sm);margin-bottom:2px}
+.mtab{flex:1;padding:6px;text-align:center;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--g600);transition:all .2s}
+.mtab.active{background:var(--white);color:var(--blue-mid);box-shadow:var(--sh-sm)}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:32px 16px;color:var(--g400)}
+.empty-state .ei{font-size:40px;margin-bottom:10px}
+.empty-state .et{font-size:13px;font-weight:600;color:var(--g600);margin-bottom:4px}
+.empty-state .es{font-size:11px}
+.empty-state button{margin-top:10px;padding:7px 16px;border-radius:var(--r-sm);border:1.5px solid var(--g200);cursor:pointer;background:var(--white);color:var(--blue-mid);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;transition:all .2s}
+.empty-state button:hover{background:var(--sky);border-color:var(--blue-light)}
+
+/* ── LISTING CARD ACTION BUTTONS ── */
+.lcard-actions{display:flex;gap:4px;margin-top:5px}
+.lcard-btn{padding:3px 9px;border-radius:6px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;transition:all .15s}
+.lcard-btn-edit{background:var(--sky);color:var(--blue-mid)}
+.lcard-btn-edit:hover{background:var(--sky-mid)}
+.lcard-btn-del{background:#FFEBEE;color:#C62828}
+.lcard-btn-del:hover{background:#FFCDD2}
+
+/* ── MAP PICK MODE ── */
+#map-pick-banner{
+  position:absolute;top:0;left:0;right:0;z-index:600;
+  background:linear-gradient(90deg,#00838F,var(--accent));
+  color:#fff;padding:11px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 12px rgba(0,131,143,.35);
+  transform:translateY(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+#map-pick-banner.active{transform:translateY(0)}
+.pick-banner-text{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.pick-banner-cancel{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 13px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;transition:all .2s}
+.pick-banner-cancel:hover{background:rgba(255,255,255,.3)}
+#map.pick-mode{cursor:crosshair!important}
+
+/* ── CONFIRM DIALOG ── */
+#confirm-dialog{
+  position:fixed;inset:0;background:rgba(10,22,40,.65);backdrop-filter:blur(4px);
+  z-index:3000;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#confirm-dialog.open{opacity:1;pointer-events:all}
+.confirm-box{
+  background:#fff;border-radius:var(--r-xl);padding:28px;width:90%;max-width:380px;
+  text-align:center;box-shadow:var(--sh-xl);
+  transform:scale(.92);transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+#confirm-dialog.open .confirm-box{transform:scale(1)}
+.confirm-icon{font-size:40px;margin-bottom:12px}
+.confirm-title{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.confirm-msg{font-size:12px;color:var(--g600);margin-bottom:20px;line-height:1.5}
+.confirm-actions{display:flex;gap:10px;justify-content:center}
+.confirm-ok{padding:9px 24px;border-radius:var(--r-sm);border:none;cursor:pointer;background:linear-gradient(135deg,#C62828,#B71C1C);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;transition:all .2s}
+.confirm-ok:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(183,28,28,.35)}
+.confirm-cancel{padding:9px 20px;border-radius:var(--r-sm);border:1.5px solid var(--g200);cursor:pointer;background:#fff;color:var(--g600);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;transition:all .2s}
+.confirm-cancel:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── COORD PICK BUTTON in form ── */
+.coord-pick-row{display:flex;gap:6px;align-items:flex-start}
+.coord-pick-row input{flex:1}
+.btn-pick-map{padding:7px 11px;border-radius:var(--r-sm);border:1.5px solid var(--accent);background:rgba(0,188,212,.08);color:#00838F;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif}
+.btn-pick-map:hover{background:var(--accent);color:#fff}
+.btn-pick-map.picking{background:var(--accent);color:#fff;animation:pulse .8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,188,212,.4)}50%{box-shadow:0 0 0 6px rgba(0,188,212,0)}}
+
+/* ── MODAL EDIT HEADER ── */
+.modal-hdr.edit-mode{background:linear-gradient(135deg,#1A237E,var(--blue-mid))}
+
+/* ── LOGIN MODAL ── */
+#login-screen{
+  position:fixed;inset:0;z-index:9000;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--blue-dark) 60%,#0E3A72 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#login-screen.h{display:none}
+.login-box{
+  background:#fff;border-radius:var(--r-xl);padding:36px 32px;width:90%;max-width:360px;
+  box-shadow:0 24px 64px rgba(0,0,0,.4);text-align:center;
+}
+.login-logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--blue-light));display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 14px;box-shadow:0 4px 16px rgba(0,188,212,.35)}
+.login-title{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--g400);margin-bottom:24px}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;text-align:left}
+.login-field label{font-size:11px;font-weight:700;color:var(--g600)}
+.login-field input{padding:10px 13px;border:1.5px solid var(--g200);border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--g800);outline:none;transition:border-color .2s}
+.login-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(25,118,210,.1)}
+.login-err{font-size:11px;color:#C62828;background:#FFEBEE;border-radius:6px;padding:7px 10px;margin-bottom:10px;display:none}
+.login-err.show{display:block}
+.btn-login{width:100%;padding:11px;border-radius:var(--r-sm);border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--blue-mid));color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;transition:all .2s;box-shadow:0 2px 8px rgba(21,101,192,.25);margin-top:4px}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.35)}
+.login-guest{margin-top:14px;font-size:11px;color:var(--g400)}
+.login-guest a{color:var(--blue-mid);font-weight:700;cursor:pointer;text-decoration:none}
+.login-guest a:hover{text-decoration:underline}
+
+/* ── ADMIN INDICATOR ── */
+#admin-badge{
+  display:flex;align-items:center;gap:6px;padding:5px 11px;
+  background:rgba(0,188,212,.15);border:1px solid rgba(0,188,212,.3);
+  border-radius:var(--r-sm);font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+#admin-badge:hover{background:rgba(0,188,212,.25)}
+#admin-badge .badge-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* hide admin-only elements in viewer mode */
+.admin-only{display:flex}
+body.viewer-mode .admin-only{display:none!important}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);color:#fff;padding:9px 18px;border-radius:var(--r-md);font-size:12px;font-weight:600;box-shadow:var(--sh-lg);z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── LOADING ── */
+#load-ov{position:fixed;inset:0;background:rgba(10,22,40,.7);z-index:9998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:11px;color:#fff}
+.spin{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.h{display:none!important}
+.leaflet-popup-content-wrapper{padding:0!important;border-radius:var(--r-lg)!important;box-shadow:var(--sh-xl)!important;overflow:hidden}
+.leaflet-popup-content{margin:0!important}
+.leaflet-popup-tip-container{display:none}
+</style>
+</head>
+<body>
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🗺️</div>
+    <div class="login-title">PropMap</div>
+    <div class="login-sub">Masuk sebagai Admin untuk akses penuh</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Username admin" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Password admin" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-err" id="login-err">Username atau password salah</div>
+    <button class="btn-login" onclick="doLogin()">🔐 Masuk sebagai Admin</button>
+    <div class="login-guest">atau <a onclick="enterViewer()">lanjut sebagai Viewer →</a></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<!-- ══ TOPBAR ══ -->
+<div id="topbar">
+  <div class="logo-wrap">
+    <div class="logo-ico">🏘️</div>
+    <div><div class="logo-text">PropMap</div><div class="logo-sub">Property Intelligence</div></div>
+  </div>
+
+  <!-- Global Search Bar -->
+  <div class="tb-search-wrap">
+    <span class="tb-sico">🔎</span>
+    <input type="text" id="tb-q" placeholder="Cari nama properti, kode, atau lokasi..." oninput="onGlobalSearch(this.value)" onkeydown="if(event.key==='Enter')onGlobalSearch(this.value)">
+    <button class="tb-search-clear" id="tb-clear" onclick="clearGlobalSearch()">✕</button>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="btn-tb btn-tb-adv" id="btn-adv" onclick="toggleAdv()">
+      ⚙️ Filter Lanjutan <span id="filter-badge" class="filter-badge h">0</span>
+    </button>
+    <button class="btn-tb btn-tb-ghost admin-only" onclick="openMod('competitor')">🏢 Kompetitor</button>
+    <button class="btn-tb btn-tb-outline admin-only" onclick="openMod('listing')">＋ Tambah</button>
+    <button class="btn-tb btn-tb-primary" onclick="dlMap()">📥 Download</button>
+    <div id="admin-badge" onclick="logoutAdmin()" title="Klik untuk logout">
+      <span class="badge-dot"></span> Admin
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADVANCED SEARCH PANEL ══ -->
+<div id="adv-panel">
+  <div class="adv-inner">
+    <div class="adv-title">
+      <span>⚙️ Filter Lanjutan</span>
+      <button class="adv-close" onclick="toggleAdv()">✕ Tutup</button>
+    </div>
+    <div class="adv-grid">
+
+      <!-- Jenis Properti -->
+      <div class="fg">
+        <label>Jenis Properti</label>
+        <select id="aq-type" onchange="updateFilterBadge()">
+          <option value="">Semua Jenis</option>
+          <option>Rumah</option><option>Apartemen</option><option>Kos-kosan</option>
+          <option>Ruko</option><option>Kantor</option><option>Office Space</option>
+          <option>Gudang</option><option>Pabrik</option><option>Tanah Hunian</option>
+          <option>Tanah Komersial</option><option>Tanah Industri</option>
+          <option>Tanah Lainnya</option><option>Komersial Lainnya</option>
+        </select>
+      </div>
+
+      <!-- Jenis Transaksi -->
+      <div class="fg">
+        <label>Jenis Transaksi</label>
+        <select id="aq-tx" onchange="updateFilterBadge()">
+          <option value="">Dijual & Disewakan</option>
+          <option>Dijual</option>
+          <option>Disewakan</option>
+        </select>
+      </div>
+
+      <!-- Lokasi / Kota -->
+      <div class="fg">
+        <label>Lokasi / Kota</label>
+        <input type="text" id="aq-lokasi" placeholder="cth: Jakarta Selatan, BSD..." oninput="updateFilterBadge()">
+      </div>
+
+      <!-- Kode Properti -->
+      <div class="fg">
+        <label>Kode Properti</label>
+        <input type="text" id="aq-kode" placeholder="cth: PRO-001" oninput="updateFilterBadge()">
+      </div>
+
+      <!-- Luas Tanah -->
+      <div class="fg">
+        <label>Luas Tanah (m²)</label>
+        <div class="rrow">
+          <input type="number" id="aq-lt-min" placeholder="Min" min="0" oninput="updateFilterBadge()">
+          <input type="number" id="aq-lt-max" placeholder="Max" min="0" oninput="updateFilterBadge()">
+        </div>
+        <div class="range-label" id="lt-range-label" style="display:none"></div>
+      </div>
+
+      <!-- Luas Bangunan -->
+      <div class="fg">
+        <label>Luas Bangunan (m²)</label>
+        <div class="rrow">
+          <input type="number" id="aq-lb-min" placeholder="Min" min="0" oninput="updateFilterBadge()">
+          <input type="number" id="aq-lb-max" placeholder="Max" min="0" oninput="updateFilterBadge()">
+        </div>
+      </div>
+
+      <!-- Kamar Tidur -->
+      <div class="fg">
+        <label>Kamar Tidur (min)</label>
+        <select id="aq-kt" onchange="updateFilterBadge()">
+          <option value="">Semua</option>
+          <option value="1">1+</option><option value="2">2+</option>
+          <option value="3">3+</option><option value="4">4+</option><option value="5">5+</option>
+        </select>
+      </div>
+
+      <!-- Kamar Mandi -->
+      <div class="fg">
+        <label>Kamar Mandi (min)</label>
+        <select id="aq-km" onchange="updateFilterBadge()">
+          <option value="">Semua</option>
+          <option value="1">1+</option><option value="2">2+</option>
+          <option value="3">3+</option><option value="4">4+</option>
+        </select>
+      </div>
+
+      <!-- Garasi -->
+      <div class="fg">
+        <label>Garasi (min)</label>
+        <select id="aq-garasi" onchange="updateFilterBadge()">
+          <option value="">Semua</option>
+          <option value="1">1+</option><option value="2">2+</option><option value="3">3+</option>
+        </select>
+      </div>
+
+      <!-- Sumber Data -->
+      <div class="fg">
+        <label>Sumber Data</label>
+        <select id="aq-src" onchange="updateFilterBadge()">
+          <option value="">Semua</option>
+          <option value="internal">Listing Internal</option>
+          <option value="competitor">Kompetitor</option>
+        </select>
+      </div>
+
+      <!-- Harga -->
+      <div class="fg" style="grid-column:span 2">
+        <label>Rentang Harga (Rp)</label>
+        <div class="rrow">
+          <input type="number" id="aq-h-min" placeholder="Harga minimum" min="0" oninput="updateFilterBadge()">
+          <input type="number" id="aq-h-max" placeholder="Harga maksimum" min="0" oninput="updateFilterBadge()">
+        </div>
+        <!-- Shortcut harga -->
+        <div class="harga-shortcuts" id="harga-shortcuts">
+          <span class="hshort" onclick="setHarga(0,500e6)">s/d 500 Jt</span>
+          <span class="hshort" onclick="setHarga(500e6,1e9)">500Jt – 1M</span>
+          <span class="hshort" onclick="setHarga(1e9,2e9)">1M – 2M</span>
+          <span class="hshort" onclick="setHarga(2e9,5e9)">2M – 5M</span>
+          <span class="hshort" onclick="setHarga(5e9,10e9)">5M – 10M</span>
+          <span class="hshort" onclick="setHarga(10e9,0)">10M+</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="adv-actions">
+      <button class="btn-reset-adv" onclick="resetAdvanced()">↺ Reset Semua Filter</button>
+      <button class="btn-apply" onclick="applyAdvanced()">🔍 Terapkan Filter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BODY ══ -->
+<div id="body">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-header">
+      <div class="sb-stats">
+        <div class="sb-count" id="sc">0 <span>properti</span></div>
+        <div class="sb-sort">
+          <label for="sb-sort-sel">Urut:</label>
+          <select id="sb-sort-sel" onchange="sortAndRender()">
+            <option value="default">Default</option>
+            <option value="harga-asc">Harga ↑</option>
+            <option value="harga-desc">Harga ↓</option>
+            <option value="lt-desc">L. Tanah ↓</option>
+            <option value="lb-desc">L. Bgn ↓</option>
+            <option value="nama">Nama A-Z</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter chips -->
+    <div id="filter-chips"></div>
+
+    <div class="sb-body">
+      <div id="listing-list"></div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-container">
+    <div id="map"></div>
+
+    <!-- Sidebar toggle -->
+    <div id="sb-toggle">
+      <button class="sb-tog-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+    </div>
+
+    <!-- Map Pick Mode Banner -->
+    <div id="map-pick-banner">
+      <div class="pick-banner-text">📍 Klik di peta untuk menentukan lokasi properti</div>
+      <button class="pick-banner-cancel" onclick="cancelMapPick()">✕ Batal</button>
+    </div>
+
+    <!-- FABs -->
+    <div id="fab-area">
+      <button class="fab" title="Zoom In" onclick="M.zoomIn()">＋</button>
+      <button class="fab" title="Zoom Out" onclick="M.zoomOut()">－</button>
+      <button class="fab" title="Lokasi Saya" onclick="myLoc()">📍</button>
+      <button class="fab" title="Fit semua pin" onclick="fitAll()">⊞</button>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend"><div class="leg-title">Legenda</div><div id="leg-items"></div></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ MODAL LISTING ══ -->
+<div class="modal-ov" id="modal-listing">
+<div class="modal">
+  <div class="modal-hdr" id="modal-listing-hdr"><div class="modal-hdr-title" id="modal-listing-title">＋ Tambah Listing Properti</div><button class="modal-x" onclick="closeMod('listing')">✕</button></div>
+  <div class="modal-bdy">
+    <div class="mtabs">
+      <div class="mtab active" onclick="swTab(this,'ti')">📋 Info Dasar</div>
+      <div class="mtab" onclick="swTab(this,'ts')">📐 Spesifikasi</div>
+      <div class="mtab" onclick="swTab(this,'tf')">📷 Foto</div>
+    </div>
+    <div id="ti">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="fr">
+          <div class="fg"><label>Kode Properti</label><input type="text" id="fkode" placeholder="PRO-001"></div>
+          <div class="fg"><label>Jenis Transaksi *</label><select id="ftx"><option>Dijual</option><option>Disewakan</option></select></div>
+        </div>
+        <div class="fg"><label>Nama / Judul Properti *</label><input type="text" id="fnama" placeholder="cth: Rumah 2 Lantai Dekat Tol"></div>
+        <div class="fg"><label>Jenis Properti *</label>
+          <select id="ftype"><option>Rumah</option><option>Apartemen</option><option>Kos-kosan</option><option>Ruko</option><option>Kantor</option><option>Office Space</option><option>Gudang</option><option>Pabrik</option><option>Tanah Hunian</option><option>Tanah Komersial</option><option>Tanah Industri</option><option>Tanah Lainnya</option><option>Komersial Lainnya</option></select>
+        </div>
+        <div class="fg"><label>Alamat / Lokasi *</label><input type="text" id="falamat" placeholder="Jl. Sudirman No.1, Jakarta Pusat"></div>
+        <div class="fg">
+          <label>Koordinat (Lat, Long) *</label>
+          <div class="coord-pick-row">
+            <input type="text" id="fcoords" placeholder="cth: -6.2088, 106.8456">
+            <button class="btn-pick-map" id="btn-pick-listing" onclick="startMapPick('listing')">📍 Pilih di Peta</button>
+          </div>
+          <div class="coord-tip">📌 Klik "Pilih di Peta" atau paste koordinat dari Google Maps (Klik Kanan → Salin koordinat)</div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label>Harga (Rp)</label><input type="number" id="fharga" placeholder="850000000"></div>
+          <div class="fg"><label>Keterangan Harga</label><input type="text" id="fhket" placeholder="/bulan, /tahun, Nego"></div>
+        </div>
+      </div>
+    </div>
+    <div id="ts" class="h">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="fr">
+          <div class="fg"><label>Luas Tanah (m²)</label><input type="number" id="flt" placeholder="0"></div>
+          <div class="fg"><label>Luas Bangunan (m²)</label><input type="number" id="flb" placeholder="0"></div>
+        </div>
+        <div class="fr3">
+          <div class="fg"><label>Kamar Tidur</label><input type="number" id="fkt" placeholder="0"></div>
+          <div class="fg"><label>Kamar Mandi</label><input type="number" id="fkm" placeholder="0"></div>
+          <div class="fg"><label>Lantai</label><input type="number" id="flantai" placeholder="0"></div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label>Garasi</label><input type="number" id="fgarasi" placeholder="0"></div>
+          <div class="fg"><label>Carport</label><input type="number" id="fcarport" placeholder="0"></div>
+        </div>
+        <div class="fg"><label>Deskripsi / Catatan</label><input type="text" id="fdesc" placeholder="Keterangan tambahan..."></div>
+      </div>
+    </div>
+    <div id="tf" class="h">
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <!-- Upload langsung ke Drive -->
+        <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:var(--r-sm);padding:10px 12px;font-size:11px;color:#1B5E20;line-height:1.6">
+          <b>☁️ Upload foto langsung ke Google Drive</b><br>
+          Pilih foto → klik <b>Upload ke Drive</b> → URL otomatis terisi. Pastikan <code>DRIVE_FOLDER_ID</code> sudah diset di <code>Code.gs</code>.
+        </div>
+
+        <!-- File picker + upload button -->
+        <div class="fg">
+          <label>Pilih Foto dari Komputer</label>
+          <input type="file" id="ffoto" accept="image/*" style="padding:7px;border:1.5px dashed var(--g200);border-radius:var(--r-sm);background:var(--g50)" onchange="onFotoSelected(this)">
+        </div>
+
+        <!-- Upload progress -->
+        <div id="foto-upload-wrap" style="display:none;flex-direction:column;gap:6px">
+          <div id="foto-preview-selected" style="border-radius:var(--r-md);overflow:hidden;border:1.5px solid var(--g200)">
+            <img id="foto-preview-img" src="" style="width:100%;max-height:180px;object-fit:cover;display:block">
+          </div>
+          <button id="btn-upload-drive" onclick="uploadFotoDrive()" style="padding:9px;border-radius:var(--r-sm);border:none;cursor:pointer;background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;transition:all .2s">
+            ☁️ Upload ke Google Drive
+          </button>
+          <div id="foto-upload-status" style="font-size:11px;color:var(--g600);text-align:center"></div>
+        </div>
+
+        <div style="text-align:center;color:var(--g400);font-size:11px;font-weight:600">— atau isi URL manual —</div>
+
+        <!-- URL input with preview -->
+        <div class="fg">
+          <label>URL Foto</label>
+          <input type="text" id="ffotourl" placeholder="https://drive.google.com/file/d/... atau URL gambar lain" oninput="previewFotoUrl(this.value)">
+        </div>
+        <div id="foto-url-preview" style="display:none;border-radius:var(--r-md);overflow:hidden;border:1.5px solid var(--g200);position:relative">
+          <img id="foto-url-img" src="" alt="Preview" style="width:100%;max-height:180px;object-fit:cover;display:block">
+          <div style="padding:6px 10px;background:var(--g50);font-size:10px;color:var(--g600);font-weight:600" id="foto-url-converted"></div>
+        </div>
+        <div id="fprev" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+
+      </div>
+    </div>
+  </div>
+  <div class="modal-ftr">
+    <button class="btn-cancel" onclick="closeMod('listing')">Batal</button>
+    <button class="btn-save" id="btn-save-listing" onclick="saveListing()">💾 Simpan Listing</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ MODAL COMPETITOR ══ -->
+<div class="modal-ov" id="modal-competitor">
+<div class="modal">
+  <div class="modal-hdr" style="background:linear-gradient(135deg,#3E2723,#5D4037)">
+    <div class="modal-hdr-title">🏢 Input Data Kompetitor</div>
+    <button class="modal-x" onclick="closeMod('competitor')">✕</button>
+  </div>
+  <div class="modal-bdy">
+    <div style="background:#FFF8E1;border:1px solid #FFE082;border-radius:var(--r-sm);padding:9px 11px;font-size:11px;color:#795548">
+      ⚠️ Data kompetitor ditandai pin <b>merah</b> khusus di peta untuk analisis market.
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Nama Perusahaan / Agen *</label><input type="text" id="cname" placeholder="cth: Era Properti"></div>
+      <div class="fg"><label>Kode Properti</label><input type="text" id="ckode" placeholder="COMP-001"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Jenis Properti</label>
+        <select id="ctype"><option>Rumah</option><option>Apartemen</option><option>Kos-kosan</option><option>Ruko</option><option>Kantor</option><option>Office Space</option><option>Gudang</option><option>Pabrik</option><option>Tanah Hunian</option><option>Tanah Komersial</option><option>Tanah Industri</option><option>Tanah Lainnya</option><option>Komersial Lainnya</option></select>
+      </div>
+      <div class="fg"><label>Jenis Transaksi</label><select id="ctx"><option>Dijual</option><option>Disewakan</option></select></div>
+    </div>
+    <div class="fg"><label>Alamat</label><input type="text" id="calamat" placeholder="Alamat properti kompetitor"></div>
+    <div class="fg">
+      <label>Koordinat (Lat, Long) *</label>
+      <div class="coord-pick-row">
+        <input type="text" id="ccoords" placeholder="cth: -6.2088, 106.8456">
+        <button class="btn-pick-map" id="btn-pick-competitor" onclick="startMapPick('competitor')">📍 Pilih di Peta</button>
+      </div>
+      <div class="coord-tip">📌 Klik "Pilih di Peta" atau paste koordinat dari Google Maps</div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Harga (Rp)</label><input type="number" id="charga" placeholder="0"></div>
+      <div class="fg"><label>Luas Tanah (m²)</label><input type="number" id="clt" placeholder="0"></div>
+    </div>
+    <div class="fg"><label>Catatan / Sumber Informasi</label><input type="text" id="cnotes" placeholder="cth: OLX, survey lapangan, portal properti"></div>
+  </div>
+  <div class="modal-ftr">
+    <button class="btn-cancel" onclick="closeMod('competitor')">Batal</button>
+    <button class="btn-save" style="background:linear-gradient(135deg,#5D4037,#795548)" onclick="saveComp()">💾 Simpan Kompetitor</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ CONFIRM DIALOG ══ -->
+<div id="confirm-dialog">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title" id="confirm-title">Hapus Listing?</div>
+    <div class="confirm-msg" id="confirm-msg">Data ini akan dihapus permanen dan tidak bisa dikembalikan.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Batal</button>
+      <button class="confirm-ok" id="confirm-ok-btn">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<div id="load-ov" class="h"><div class="spin"></div><div style="font-size:13px;font-weight:600">Memproses...</div></div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════
+// CONFIG
+// ══════════════════════════════════
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz8MOim5CgnadTeWUsvw96hepy9H2Vse6ImdR2FqhAhMXxERLk1AA-8WGtB7F_ZkQb3wg/exec'; // ← Isi URL Google Apps Script Web App
+
+const COLORS = {
+  'Rumah':'#1565C0','Apartemen':'#6A1B9A','Kos-kosan':'#00838F','Ruko':'#E65100',
+  'Kantor':'#1B5E20','Office Space':'#33691E','Gudang':'#4E342E','Pabrik':'#37474F',
+  'Tanah Hunian':'#F57F17','Tanah Komersial':'#BF360C','Tanah Industri':'#880E4F',
+  'Tanah Lainnya':'#827717','Komersial Lainnya':'#006064','Kompetitor':'#B71C1C'
+};
+const EMO = {
+  'Rumah':'🏠','Apartemen':'🏢','Kos-kosan':'🛏️','Ruko':'🏪','Kantor':'🏬',
+  'Office Space':'💼','Gudang':'🏭','Pabrik':'🏗️','Tanah Hunian':'🌿',
+  'Tanah Komersial':'📦','Tanah Industri':'⚙️','Tanah Lainnya':'🌾',
+  'Komersial Lainnya':'🏙️','Kompetitor':'🔴'
+};
+
+// ══════════════════════════════════
+// MAP INIT
+// ══════════════════════════════════
+const M = L.map('map',{zoomControl:false}).setView([-7.0051,110.4381],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(M);
+
+// ══════════════════════════════════
+// DATA
+// ══════════════════════════════════
+let DATA = [
+  {id:1,kode:'PRO-001',nama:'Rumah Minimalis 2 Lantai Banyumanik',type:'Rumah',tx:'Dijual',alamat:'Jl. Setiabudi No.12, Banyumanik, Semarang',coords:'-7.0523,110.4248',harga:850000000,hket:'Nego',lt:120,lb:180,kt:3,km:2,lantai:2,garasi:1,carport:1,foto:'',desc:'Rumah baru, dekat kampus UNDIP',src:'internal'},
+  {id:2,kode:'PRO-002',nama:'Ruko Strategis Jl. Pemuda',type:'Ruko',tx:'Disewakan',alamat:'Jl. Pemuda No.35, Semarang Tengah',coords:'-6.9935,110.4127',harga:35000000,hket:'/tahun',lt:46,lb:68,kt:0,km:2,lantai:2,garasi:0,carport:0,foto:'',desc:'Lokasi sangat strategis, tengah kota',src:'internal'},
+  {id:3,kode:'PRO-003',nama:'Apartemen Peterongan City View',type:'Apartemen',tx:'Disewakan',alamat:'Jl. MT Haryono, Peterongan, Semarang',coords:'-7.0089,110.4309',harga:4500000,hket:'/bulan',lt:0,lb:28,kt:0,km:1,lantai:8,garasi:0,carport:0,foto:'',desc:'Full furnished, view kota, dekat simpang lima',src:'internal'},
+  {id:4,kode:'PRO-004',nama:'Tanah Kavling Tembalang',type:'Tanah Hunian',tx:'Dijual',alamat:'Jl. Prof. Soedarto, Tembalang, Semarang',coords:'-7.0511,110.4381',harga:1200000000,hket:'',lt:300,lb:0,kt:0,km:0,lantai:0,garasi:0,carport:0,foto:'',desc:'SHM, dekat UNDIP, cocok untuk kos-kosan',src:'internal'},
+  {id:5,kode:'PRO-005',nama:'Gudang Kawasan Industri Kaligawe',type:'Gudang',tx:'Disewakan',alamat:'Jl. Kaligawe Raya, Genuk, Semarang',coords:'-6.9783,110.4612',harga:22000000,hket:'/bulan',lt:800,lb:700,kt:0,km:2,lantai:1,garasi:2,carport:0,foto:'',desc:'Akses kontainer, dekat pelabuhan Tanjung Emas',src:'internal'},
+  {id:6,kode:'PRO-006',nama:'Kos-kosan 15 Kamar Tembalang',type:'Kos-kosan',tx:'Dijual',alamat:'Jl. Ngesrep Timur V, Tembalang, Semarang',coords:'-7.0561,110.4421',harga:1500000000,hket:'Nego',lt:180,lb:320,kt:15,km:15,lantai:3,garasi:0,carport:2,foto:'',desc:'Full terisi, dekat kampus, income stabil',src:'internal'},
+  {id:7,kode:'COMP-001',nama:'[Kompetitor] ERA - Rumah Gajah Mungkur',type:'Kompetitor',tx:'Dijual',alamat:'Jl. Gajah Mungkur, Semarang Selatan',coords:'-7.0231,110.4089',harga:2100000000,hket:'',lt:200,lb:250,kt:4,km:3,lantai:2,garasi:2,carport:0,foto:'',desc:'Sumber: listing ERA Semarang',src:'competitor'},
+];
+
+let filtered = [...DATA];
+let MKS = [];
+let activeFilters = {}; // track active filter state
+
+// ══════════════════════════════════
+// GLOBAL SEARCH (topbar)
+// ══════════════════════════════════
+function onGlobalSearch(val) {
+  document.getElementById('tb-clear').classList.toggle('vis', val.length > 0);
+  activeFilters.keyword = val.toLowerCase().trim();
+  applyAllFilters();
+}
+function clearGlobalSearch() {
+  document.getElementById('tb-q').value = '';
+  document.getElementById('tb-clear').classList.remove('vis');
+  activeFilters.keyword = '';
+  applyAllFilters();
+}
+
+// ══════════════════════════════════
+// ADVANCED PANEL
+// ══════════════════════════════════
+let advOpen = false;
+function toggleAdv() {
+  advOpen = !advOpen;
+  document.getElementById('adv-panel').classList.toggle('open', advOpen);
+  document.getElementById('btn-adv').classList.toggle('active-filter', advOpen);
+}
+
+function setHarga(min, max) {
+  document.getElementById('aq-h-min').value = min || '';
+  document.getElementById('aq-h-max').value = max || '';
+  // highlight shortcut
+  document.querySelectorAll('.hshort').forEach(el => {
+    const [a,b] = [parseFloat(el.dataset.min)||0, parseFloat(el.dataset.max)||0];
+    el.classList.remove('active');
+  });
+  updateFilterBadge();
+}
+
+function updateFilterBadge() {
+  const count = countActiveAdvFilters();
+  const badge = document.getElementById('filter-badge');
+  badge.textContent = count;
+  badge.classList.toggle('h', count === 0);
+  document.getElementById('btn-adv').classList.toggle('active-filter', count > 0 || advOpen);
+}
+
+function countActiveAdvFilters() {
+  let c = 0;
+  if (document.getElementById('aq-type').value)   c++;
+  if (document.getElementById('aq-tx').value)     c++;
+  if (document.getElementById('aq-lokasi').value) c++;
+  if (document.getElementById('aq-kode').value)   c++;
+  if (document.getElementById('aq-kt').value)     c++;
+  if (document.getElementById('aq-km').value)     c++;
+  if (document.getElementById('aq-garasi').value) c++;
+  if (document.getElementById('aq-src').value)    c++;
+  if (document.getElementById('aq-lt-min').value || document.getElementById('aq-lt-max').value) c++;
+  if (document.getElementById('aq-lb-min').value || document.getElementById('aq-lb-max').value) c++;
+  if (document.getElementById('aq-h-min').value  || document.getElementById('aq-h-max').value)  c++;
+  return c;
+}
+
+function applyAdvanced() {
+  // Read all advanced filter values into activeFilters
+  activeFilters.type   = document.getElementById('aq-type').value;
+  activeFilters.tx     = document.getElementById('aq-tx').value;
+  activeFilters.lokasi = document.getElementById('aq-lokasi').value.toLowerCase().trim();
+  activeFilters.kode   = document.getElementById('aq-kode').value.toLowerCase().trim();
+  activeFilters.kt     = parseInt(document.getElementById('aq-kt').value) || 0;
+  activeFilters.km     = parseInt(document.getElementById('aq-km').value) || 0;
+  activeFilters.garasi = parseInt(document.getElementById('aq-garasi').value) || 0;
+  activeFilters.src    = document.getElementById('aq-src').value;
+  activeFilters.ltMin  = parseFloat(document.getElementById('aq-lt-min').value) || 0;
+  activeFilters.ltMax  = parseFloat(document.getElementById('aq-lt-max').value) || Infinity;
+  activeFilters.lbMin  = parseFloat(document.getElementById('aq-lb-min').value) || 0;
+  activeFilters.lbMax  = parseFloat(document.getElementById('aq-lb-max').value) || Infinity;
+  activeFilters.hMin   = parseFloat(document.getElementById('aq-h-min').value) || 0;
+  activeFilters.hMax   = parseFloat(document.getElementById('aq-h-max').value) || Infinity;
+
+  applyAllFilters();
+  updateFilterChips();
+  toggleAdv();
+  toast(`🔍 Filter diterapkan — ${filtered.length} properti`);
+}
+
+function resetAdvanced() {
+  ['aq-type','aq-tx','aq-lokasi','aq-kode','aq-kt','aq-km','aq-garasi','aq-src',
+   'aq-lt-min','aq-lt-max','aq-lb-min','aq-lb-max','aq-h-min','aq-h-max']
+  .forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
+  activeFilters = { keyword: activeFilters.keyword || '' };
+  updateFilterBadge();
+  applyAllFilters();
+  updateFilterChips();
+  toast('↺ Filter lanjutan direset');
+}
+
+// ══════════════════════════════════
+// MASTER FILTER FUNCTION
+// ══════════════════════════════════
+function applyAllFilters() {
+  const f = activeFilters;
+  filtered = DATA.filter(p => {
+    // keyword (global search)
+    if (f.keyword) {
+      const hay = (p.nama+' '+p.kode+' '+p.alamat+' '+p.type).toLowerCase();
+      if (!hay.includes(f.keyword)) return false;
+    }
+    if (f.type   && p.type !== f.type)   return false;
+    if (f.tx     && p.tx !== f.tx)       return false;
+    if (f.lokasi && !p.alamat.toLowerCase().includes(f.lokasi)) return false;
+    if (f.kode   && !p.kode.toLowerCase().includes(f.kode))     return false;
+    if (f.src    && p.src !== f.src)     return false;
+    if (f.kt     && p.kt < f.kt)         return false;
+    if (f.km     && p.km < f.km)         return false;
+    if (f.garasi && p.garasi < f.garasi) return false;
+    if (f.ltMin  && p.lt && p.lt < f.ltMin)  return false;
+    if (f.ltMax !== Infinity && p.lt && p.lt > f.ltMax) return false;
+    if (f.lbMin  && p.lb && p.lb < f.lbMin)  return false;
+    if (f.lbMax !== Infinity && p.lb && p.lb > f.lbMax) return false;
+    if (f.hMin   && p.harga && p.harga < f.hMin) return false;
+    if (f.hMax !== Infinity && p.harga && p.harga > f.hMax) return false;
+    return true;
+  });
+
+  sortAndRenderWith(filtered);
+}
+
+// ══════════════════════════════════
+// SORT
+// ══════════════════════════════════
+function sortAndRender() {
+  sortAndRenderWith(filtered);
+}
+function sortAndRenderWith(data) {
+  const sort = document.getElementById('sb-sort-sel').value;
+  const sorted = [...data];
+  if (sort === 'harga-asc')  sorted.sort((a,b) => a.harga - b.harga);
+  if (sort === 'harga-desc') sorted.sort((a,b) => b.harga - a.harga);
+  if (sort === 'lt-desc')    sorted.sort((a,b) => b.lt - a.lt);
+  if (sort === 'lb-desc')    sorted.sort((a,b) => b.lb - a.lb);
+  if (sort === 'nama')       sorted.sort((a,b) => a.nama.localeCompare(b.nama));
+  renderMarkers(sorted);
+  renderList(sorted);
+  buildLeg(sorted);
+}
+
+// ══════════════════════════════════
+// FILTER CHIPS
+// ══════════════════════════════════
+function updateFilterChips() {
+  const f = activeFilters;
+  const chips = [];
+
+  if (f.type)   chips.push({ label:'Jenis: '+f.type,   key:'type' });
+  if (f.tx)     chips.push({ label:'Transaksi: '+f.tx,  key:'tx' });
+  if (f.lokasi) chips.push({ label:'Lokasi: '+f.lokasi, key:'lokasi' });
+  if (f.kode)   chips.push({ label:'Kode: '+f.kode,     key:'kode' });
+  if (f.src)    chips.push({ label:'Sumber: '+(f.src==='internal'?'Internal':'Kompetitor'), key:'src' });
+  if (f.kt)     chips.push({ label:'KT min: '+f.kt,     key:'kt' });
+  if (f.km)     chips.push({ label:'KM min: '+f.km,     key:'km' });
+  if (f.garasi) chips.push({ label:'Garasi min: '+f.garasi, key:'garasi' });
+  if (f.ltMin||f.ltMax!==Infinity) chips.push({ label:'L.Tanah: '+fmtRange(f.ltMin,f.ltMax,'m²'), key:'lt' });
+  if (f.lbMin||f.lbMax!==Infinity) chips.push({ label:'L.Bgn: '+fmtRange(f.lbMin,f.lbMax,'m²'), key:'lb' });
+  if (f.hMin||f.hMax!==Infinity)   chips.push({ label:'Harga: '+fmtRange(f.hMin,f.hMax,'Rp',true), key:'harga' });
+
+  const el = document.getElementById('filter-chips');
+  if (chips.length === 0) { el.innerHTML = ''; return; }
+
+  el.innerHTML = chips.map(c =>
+    `<div class="chip">${c.label} <button onclick="removeChip('${c.key}')">✕</button></div>`
+  ).join('') + `<div class="chip chip-clear-all">Reset semua <button onclick="resetAdvanced()">✕</button></div>`;
+}
+
+function removeChip(key) {
+  if (key === 'lt')    { activeFilters.ltMin = 0; activeFilters.ltMax = Infinity; document.getElementById('aq-lt-min').value=''; document.getElementById('aq-lt-max').value=''; }
+  else if (key === 'lb')    { activeFilters.lbMin = 0; activeFilters.lbMax = Infinity; document.getElementById('aq-lb-min').value=''; document.getElementById('aq-lb-max').value=''; }
+  else if (key === 'harga') { activeFilters.hMin = 0; activeFilters.hMax = Infinity; document.getElementById('aq-h-min').value=''; document.getElementById('aq-h-max').value=''; }
+  else {
+    activeFilters[key] = '';
+    const map = {type:'aq-type',tx:'aq-tx',lokasi:'aq-lokasi',kode:'aq-kode',src:'aq-src',kt:'aq-kt',km:'aq-km',garasi:'aq-garasi'};
+    if (map[key]) document.getElementById(map[key]).value = '';
+  }
+  updateFilterBadge();
+  applyAllFilters();
+  updateFilterChips();
+}
+
+function fmtRange(min, max, unit, isCurrency=false) {
+  const fmt = v => isCurrency ? fmtH(v) : (v||0)+unit;
+  if (!min && max !== Infinity) return 's/d '+fmt(max);
+  if (min && max === Infinity)  return fmt(min)+'+';
+  if (min && max !== Infinity)  return fmt(min)+' – '+fmt(max);
+  return '';
+}
+
+// ══════════════════════════════════
+// RENDER MARKERS
+// ══════════════════════════════════
+function mkPin(color,isComp=false){
+  const s=isComp?32:26;
+  return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${color};border:2px solid rgba(255,255,255,.9);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,.3)${isComp?';outline:2px solid '+color+';outline-offset:2px':''}"></div>`,iconSize:[s,s],iconAnchor:[s/2,s],popupAnchor:[0,-s]});
+}
+
+function renderMarkers(data) {
+  MKS.forEach(m => M.removeLayer(m.mk)); MKS = [];
+  data.forEach(p => {
+    const c = pc(p.coords); if (!c) return;
+    const col = COLORS[p.type]||'#1565C0';
+    const isC = p.src==='competitor';
+    const mk = L.marker(c,{icon:mkPin(col,isC)}).addTo(M);
+    const ph = p.foto
+      ? `<div class="pp-img"><img src="${p.foto}" alt="${p.nama}" onerror="this.parentElement.innerHTML='${EMO[p.type]||'🏠'}'"></div>`
+      : `<div class="pp-img">${EMO[p.type]||'🏠'}</div>`;
+    const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">🟢 Dijual</span>` : `<span class="bdg bdg-sewa">🟠 Disewakan</span>`;
+    const specs = [];
+    if(p.lt)     specs.push(`<div class="spec-i"><div class="spec-l">L.Tanah</div><div class="spec-v">${p.lt}m²</div></div>`);
+    if(p.lb)     specs.push(`<div class="spec-i"><div class="spec-l">L.Bgn</div><div class="spec-v">${p.lb}m²</div></div>`);
+    if(p.kt)     specs.push(`<div class="spec-i"><div class="spec-l">KT</div><div class="spec-v">${p.kt}</div></div>`);
+    if(p.km)     specs.push(`<div class="spec-i"><div class="spec-l">KM</div><div class="spec-v">${p.km}</div></div>`);
+    if(p.garasi) specs.push(`<div class="spec-i"><div class="spec-l">Garasi</div><div class="spec-v">${p.garasi}</div></div>`);
+    if(p.lantai) specs.push(`<div class="spec-i"><div class="spec-l">Lantai</div><div class="spec-v">${p.lantai}</div></div>`);
+    const adminBtns = isAdmin() ? `<div style="display:flex;gap:6px;margin-top:10px"><button onclick="editListing(${p.id})" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;background:#E3F2FD;color:#1565C0;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">✏️ Edit</button><button onclick="confirmDelete(${p.id})" style="padding:7px 12px;border-radius:6px;border:none;cursor:pointer;background:#FFEBEE;color:#C62828;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif">🗑️</button></div>` : '';
+    mk.bindPopup(`<div class="prop-popup">${ph}<div class="pp-body"><div class="pp-bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}</div><div class="pp-code">📋 ${p.kode}</div><div class="pp-name">${p.nama}</div><div class="pp-loc">📍 ${p.alamat}</div>${specs.length?`<div class="pp-specs">${specs.join('')}</div>`:''}<div class="pp-price"><div class="pp-pl">${p.tx==='Dijual'?'Harga Jual':'Harga Sewa'}</div><div class="pp-pv">${fmtH(p.harga)}</div>${p.hket?`<div class="pp-ps">${p.hket}</div>`:''}</div>${p.desc?`<div style="margin-top:6px;font-size:10px;color:#546E8A">${p.desc}</div>`:''}${adminBtns}</div></div>`,{maxWidth:285});
+    mk.on('click',()=>hlCard(p.id));
+    MKS.push({id:p.id,mk});
+  });
+  document.getElementById('sc').innerHTML = `${data.length} <span>properti</span>`;
+}
+
+// ══════════════════════════════════
+// RENDER LIST
+// ══════════════════════════════════
+function renderList(data) {
+  const el = document.getElementById('listing-list');
+  if (data.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">🔍</div><div class="et">Tidak ada properti ditemukan</div><div class="es">Coba ubah kata kunci atau reset filter</div><button onclick="resetAdvanced();clearGlobalSearch()">↺ Reset Semua</button></div>`;
+    return;
+  }
+  el.innerHTML = data.map(p => {
+    const col = COLORS[p.type]||'#1565C0';
+    const txB = p.tx==='Dijual' ? `<span class="bdg bdg-jual">Dijual</span>` : `<span class="bdg bdg-sewa">Disewakan</span>`;
+    const srcB = p.src==='competitor' ? `<span class="bdg bdg-comp">Komp.</span>` : '';
+    const thumbContent = p.foto
+      ? `<img src="${p.foto}" alt="${p.nama}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:28px\\'>${EMO[p.type]||'🏠'}</span>'">`
+      : `<span style="font-size:28px">${EMO[p.type]||'🏠'}</span>`;
+    return `<div class="lcard" id="c${p.id}">
+      <div class="lcard-thumb" style="background:${col}15" onclick="flyTo(${p.id})">${thumbContent}</div>
+      <div class="lcard-row">
+        <div class="lcard-body" onclick="flyTo(${p.id})">
+          <div class="bdgs"><span class="bdg bdg-type" style="background:${col}18;color:${col}">${p.type}</span>${txB}${srcB}</div>
+          <div class="lcard-code">${p.kode}</div>
+          <div class="lcard-name" title="${p.nama}">${p.nama}</div>
+          <div class="lcard-loc" title="${p.alamat}">📍 ${p.alamat}</div>
+          <div class="lcard-price">${fmtH(p.harga,p.hket)}</div>
+        </div>
+        <div class="admin-only" style="flex-direction:column;justify-content:center;gap:4px;padding:8px 8px 8px 0;flex-shrink:0">
+          <button class="lcard-btn lcard-btn-edit" onclick="event.stopPropagation();editListing(${p.id})" title="Edit">✏️</button>
+          <button class="lcard-btn lcard-btn-del" onclick="event.stopPropagation();confirmDelete(${p.id})" title="Hapus">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// LEGEND
+// ══════════════════════════════════
+function buildLeg(data) {
+  const used = [...new Set(data.map(d=>d.type))];
+  document.getElementById('leg-items').innerHTML = used.map(t =>
+    `<div class="leg-item"><div class="leg-pin" style="background:${COLORS[t]||'#1565C0'}"></div>${t}</div>`
+  ).join('');
+}
+
+// ══════════════════════════════════
+// HELPERS
+// ══════════════════════════════════
+function fmtH(h,k=''){
+  if(!h) return 'Nego';
+  if(h>=1e12)return'Rp '+(h/1e12).toFixed(2)+' T'+(k?' '+k:'');
+  if(h>=1e9)return'Rp '+(h/1e9).toFixed(2)+' M'+(k?' '+k:'');
+  if(h>=1e6)return'Rp '+(h/1e6).toFixed(0)+' Jt'+(k?' '+k:'');
+  return'Rp '+h.toLocaleString('id-ID')+(k?' '+k:'');
+}
+function pc(s){if(!s)return null;const p=s.replace(/\s/g,'').split(',');if(p.length<2)return null;const a=parseFloat(p[0]),b=parseFloat(p[1]);return(isNaN(a)||isNaN(b))?null:[a,b];}
+
+function flyTo(id){
+  const m=MKS.find(x=>x.id===id);if(!m)return;
+  M.flyTo(m.mk.getLatLng(),16,{duration:1});
+  setTimeout(()=>m.mk.openPopup(),800);
+  hlCard(id);
+}
+function hlCard(id){
+  document.querySelectorAll('.lcard').forEach(c=>c.classList.remove('active'));
+  const el=document.getElementById('c'+id);
+  if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+function fitAll(){
+  const pts=MKS.map(m=>m.mk.getLatLng()).filter(Boolean);
+  if(pts.length>0)M.fitBounds(L.latLngBounds(pts),{padding:[40,40]});
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  setTimeout(function(){ M.invalidateSize(); }, 320);
+}
+
+// ══════════════════════════════════
+// MODALS
+// ══════════════════════════════════
+function resetListingForm() {
+  editingId = null;
+  ['fkode','fnama','falamat','fcoords','fharga','fhket','flt','flb','fkt','fkm','flantai','fgarasi','fcarport','fdesc','ffotourl']
+    .forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
+  document.getElementById('ftype').value = 'Rumah';
+  document.getElementById('ftx').value = 'Dijual';
+  document.getElementById('fprev').innerHTML = '';
+  document.getElementById('foto-url-preview').style.display = 'none';
+  document.getElementById('ffotourl').value = '';
+  document.getElementById('modal-listing-title').textContent = '＋ Tambah Listing Properti';
+  document.getElementById('modal-listing-hdr').classList.remove('edit-mode');
+  document.getElementById('btn-save-listing').textContent = '💾 Simpan Listing';
+}
+
+function openMod(t){document.getElementById('modal-'+t).classList.add('open');}
+function closeMod(t){
+  document.getElementById('modal-'+t).classList.remove('open');
+  if (t === 'listing') resetListingForm();
+}
+function swTab(tab,tid){
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');
+  ['ti','ts','tf'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.toggle('h',id!==tid);});
+}
+// ══════════════════════════════════
+// FOTO URL HELPERS
+// ══════════════════════════════════
+
+// Konvert berbagai format URL Google Drive → direct image URL
+function convertDriveUrl(url) {
+  if (!url) return '';
+
+  // Sudah format lh3 (hasil upload via GAS) — langsung return
+  if (url.includes('lh3.googleusercontent.com')) return url;
+
+  // Sudah format direct (uc?export=view atau uc?id=)
+  if (url.includes('drive.google.com/uc?')) return url;
+
+  // Format: drive.google.com/file/d/FILE_ID/view
+  const m1 = url.match(/drive\.google\.com\/file\/d\/([^\/\?]+)/);
+  if (m1) return 'https://lh3.googleusercontent.com/d/' + m1[1];
+
+  // Format: drive.google.com/open?id=FILE_ID
+  const m2 = url.match(/[?&]id=([^&]+)/);
+  if (m2 && url.includes('drive.google.com')) return 'https://lh3.googleusercontent.com/d/' + m2[1];
+
+  // Bukan Drive URL — kembalikan apa adanya
+  return url;
+}
+
+function previewFotoUrl(raw) {
+  const converted = convertDriveUrl(raw.trim());
+  const prevBox  = document.getElementById('foto-url-preview');
+  const prevImg  = document.getElementById('foto-url-img');
+  const prevInfo = document.getElementById('foto-url-converted');
+
+  if (!converted) { prevBox.style.display = 'none'; return; }
+
+  prevImg.src = converted;
+  prevBox.style.display = 'block';
+
+  const isDrive = converted !== raw.trim();
+  prevInfo.textContent = isDrive ? '✅ URL Google Drive otomatis dikonversi: ' + converted : '🔗 ' + converted;
+  prevInfo.style.color = isDrive ? '#2E7D32' : '#546E8A';
+
+  prevImg.onerror = () => {
+    prevInfo.textContent = '⚠️ Foto tidak bisa dimuat. Pastikan akses Drive diset ke "Siapa saja yang memiliki link".';
+    prevInfo.style.color = '#C62828';
+    prevImg.style.display = 'none';
+  };
+  prevImg.onload = () => { prevImg.style.display = 'block'; };
+}
+
+
+// ══════════════════════════════════
+// EDIT LISTING
+// ══════════════════════════════════
+let editingId = null;
+
+function editListing(id) {
+  const p = DATA.find(x => x.id === id);
+  if (!p) return;
+
+  editingId = id;
+
+  // Switch modal to edit mode
+  document.getElementById('modal-listing-title').textContent = '✏️ Edit Listing — ' + p.kode;
+  document.getElementById('modal-listing-hdr').classList.add('edit-mode');
+  document.getElementById('btn-save-listing').textContent = '💾 Simpan Perubahan';
+
+  // Populate all fields
+  document.getElementById('fkode').value    = p.kode;
+  document.getElementById('ftx').value      = p.tx;
+  document.getElementById('fnama').value    = p.nama;
+  document.getElementById('ftype').value    = p.type;
+  document.getElementById('falamat').value  = p.alamat;
+  document.getElementById('fcoords').value  = p.coords;
+  document.getElementById('fharga').value   = p.harga || '';
+  document.getElementById('fhket').value    = p.hket || '';
+  document.getElementById('flt').value      = p.lt || '';
+  document.getElementById('flb').value      = p.lb || '';
+  document.getElementById('fkt').value      = p.kt || '';
+  document.getElementById('fkm').value      = p.km || '';
+  document.getElementById('flantai').value  = p.lantai || '';
+  document.getElementById('fgarasi').value  = p.garasi || '';
+  document.getElementById('fcarport').value = p.carport || '';
+  document.getElementById('fdesc').value    = p.desc || '';
+  document.getElementById('ffotourl').value = p.foto || '';
+  if (p.foto) previewFotoUrl(p.foto);
+
+  // Reset to first tab
+  swTab(document.querySelector('.mtab'), 'ti');
+
+  // Close popup if open, then open modal
+  M.closePopup();
+  openMod('listing');
+}
+
+// ══════════════════════════════════
+// DELETE / CONFIRM
+// ══════════════════════════════════
+let confirmCallback = null;
+
+function confirmDelete(id) {
+  const p = DATA.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('confirm-title').textContent = 'Hapus Listing?';
+  document.getElementById('confirm-msg').innerHTML = `Anda akan menghapus:<br><b>${p.nama}</b><br><small style="color:var(--g400)">${p.kode}</small><br><br>Data ini tidak bisa dikembalikan.`;
+  confirmCallback = () => doDelete(id);
+  document.getElementById('confirm-ok-btn').onclick = () => { closeConfirm(); doDelete(id); };
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-dialog').classList.remove('open');
+  confirmCallback = null;
+}
+
+function doDelete(id) {
+  const idx = DATA.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const p = DATA[idx];
+  DATA.splice(idx, 1);
+  filtered = filtered.filter(x => x.id !== id);
+
+  if (SHEET_URL) {
+    const action = p.src === 'competitor' ? 'deleteCompetitor' : 'deleteListing';
+    fetch(SHEET_URL, { method:'POST', body: JSON.stringify({ action, data:{ id } }) })
+      .then(r => r.json())
+      .then(() => toast('🗑️ Data berhasil dihapus dari Sheets'))
+      .catch(() => toast('⚠️ Dihapus lokal, gagal sync ke Sheets'));
+  } else {
+    toast('🗑️ Listing berhasil dihapus');
+  }
+
+  // Remove marker immediately
+  const mIdx = MKS.findIndex(x => x.id === id);
+  if (mIdx !== -1) { M.removeLayer(MKS[mIdx].mk); MKS.splice(mIdx,1); }
+
+  applyAllFilters();
+}
+
+// ══════════════════════════════════
+// MAP PICK MODE
+// ══════════════════════════════════
+let pickMode = null;      // 'listing' | 'competitor'
+let pickMarker = null;    // temporary preview marker
+
+function startMapPick(formType) {
+  pickMode = formType;
+  document.getElementById('map').classList.add('pick-mode');
+  document.getElementById('map-pick-banner').classList.add('active');
+
+  // Minimise modal so map is visible — close it
+  closeMod('listing');
+  closeMod('competitor');
+
+  // Highlight the pick button
+  const btn = document.getElementById('btn-pick-'+formType);
+  if (btn) btn.classList.add('picking');
+
+  toast('📍 Klik di peta untuk memilih lokasi properti');
+}
+
+function cancelMapPick() {
+  pickMode = null;
+  document.getElementById('map').classList.remove('pick-mode');
+  document.getElementById('map-pick-banner').classList.remove('active');
+  document.querySelectorAll('.btn-pick-map').forEach(b => b.classList.remove('picking'));
+  if (pickMarker) { M.removeLayer(pickMarker); pickMarker = null; }
+}
+
+// Map click handler for pick mode
+M.on('click', function(e) {
+  if (!pickMode) return;
+
+  const lat = e.latlng.lat.toFixed(6);
+  const lng = e.latlng.lng.toFixed(6);
+  const coordStr = lat + ', ' + lng;
+
+  // Update temp preview marker
+  if (pickMarker) M.removeLayer(pickMarker);
+  pickMarker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="width:28px;height:28px;background:#00BCD4;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 12px rgba(0,188,212,.6);animation:pulse .8s ease-in-out infinite"></div>`,
+      iconSize:[28,28], iconAnchor:[14,14]
+    })
+  }).addTo(M);
+  pickMarker.bindPopup(`<div style="font-family:'Plus Jakarta Sans',sans-serif;padding:4px 2px;font-size:12px;font-weight:700;color:#0D2B55">📍 ${coordStr}</div>`).openPopup();
+
+  // Fill the coordinate field
+  const targetField = pickMode === 'listing' ? 'fcoords' : 'ccoords';
+  document.getElementById(targetField).value = coordStr;
+
+  // Restore modal after short delay
+  const fm = pickMode;
+  cancelMapPick();
+  setTimeout(() => {
+    openMod(fm);
+    toast('✅ Koordinat berhasil dipilih: ' + coordStr);
+  }, 400);
+});
+
+// ══════════════════════════════════
+// SAVE (updated — handles Add & Edit)
+// ══════════════════════════════════
+function saveListing(){
+  const nama=document.getElementById('fnama').value;
+  const coords=document.getElementById('fcoords').value;
+  if(!nama||!coords){toast('⚠️ Nama dan Koordinat wajib!');return;}
+  if(!pc(coords)){toast('⚠️ Format koordinat salah! cth: -6.2088, 106.8456');return;}
+
+  const formData = {
+    kode:    document.getElementById('fkode').value || (editingId ? '' : 'PRO-'+(DATA.length+1).toString().padStart(3,'0')),
+    nama,
+    type:    (() => { if(editingId){ const orig=DATA.find(x=>x.id===editingId); if(orig?.type==='Kompetitor') return 'Kompetitor'; } return document.getElementById('ftype').value; })(),
+    tx:      document.getElementById('ftx').value,
+    alamat:  document.getElementById('falamat').value,
+    coords,
+    harga:   parseFloat(document.getElementById('fharga').value)||0,
+    hket:    document.getElementById('fhket').value,
+    lt:      parseFloat(document.getElementById('flt').value)||0,
+    lb:      parseFloat(document.getElementById('flb').value)||0,
+    kt:      parseInt(document.getElementById('fkt').value)||0,
+    km:      parseInt(document.getElementById('fkm').value)||0,
+    lantai:  parseInt(document.getElementById('flantai').value)||0,
+    garasi:  parseInt(document.getElementById('fgarasi').value)||0,
+    carport: parseInt(document.getElementById('fcarport').value)||0,
+    desc:    document.getElementById('fdesc').value,
+    foto:    convertDriveUrl(document.getElementById('ffotourl').value.trim()),
+    src:     editingId ? (DATA.find(x=>x.id===editingId)?.src || 'internal') : 'internal'
+  };
+
+  if (editingId) {
+    // ── UPDATE EXISTING ──
+    const idx = DATA.findIndex(x => x.id === editingId);
+    if (idx !== -1) {
+      DATA[idx] = { ...DATA[idx], ...formData };
+      if (SHEET_URL) {
+        fetch(SHEET_URL, { method:'POST', body: JSON.stringify({ action:'updateListing', data:{ id:editingId, ...formData } }) })
+          .then(r=>r.json()).then(()=>toast('✅ Perubahan tersimpan ke Google Sheets!')).catch(()=>toast('✅ Perubahan disimpan lokal'));
+      } else {
+        toast('✅ Listing berhasil diperbarui!');
+      }
+    }
+  } else {
+    // ── ADD NEW ──
+    const np = { id: Date.now(), ...formData };
+    DATA.push(np);
+    if (SHEET_URL) {
+      fetch(SHEET_URL,{method:'POST',body:JSON.stringify({action:'addListing',data:np})})
+        .then(r=>r.json()).then(()=>toast('✅ Tersimpan ke Google Sheets!')).catch(()=>toast('⚠️ Tersimpan lokal'));
+    } else {
+      toast('✅ Listing berhasil ditambahkan!');
+    }
+  }
+
+  filtered=[...DATA]; applyAllFilters(); closeMod('listing');
+  if (!editingId) flyTo(DATA[DATA.length-1].id);
+  resetListingForm();
+}
+function saveComp(){
+  const nama=document.getElementById('cname').value;
+  const coords=document.getElementById('ccoords').value;
+  if(!nama||!coords){toast('⚠️ Nama kompetitor dan Koordinat wajib!');return;}
+  if(!pc(coords)){toast('⚠️ Format koordinat salah!');return;}
+  const nc={id:Date.now(),kode:document.getElementById('ckode').value||'COMP-'+(DATA.filter(x=>x.src==='competitor').length+1).toString().padStart(3,'0'),nama:'[Kompetitor] '+nama,type:'Kompetitor',tx:document.getElementById('ctx').value,alamat:document.getElementById('calamat').value,coords,harga:parseFloat(document.getElementById('charga').value)||0,hket:'',lt:parseFloat(document.getElementById('clt').value)||0,lb:0,kt:0,km:0,lantai:0,garasi:0,carport:0,desc:document.getElementById('cnotes').value,foto:'',src:'competitor'};
+  DATA.push(nc);filtered=[...DATA];applyAllFilters();closeMod('competitor');flyTo(nc.id);toast('✅ Data kompetitor ditambahkan!');
+}
+
+// ══════════════════════════════════
+// GEO & DOWNLOAD
+// ══════════════════════════════════
+function myLoc(){if(!navigator.geolocation){toast('Geolokasi tidak didukung');return;}navigator.geolocation.getCurrentPosition(p=>{M.flyTo([p.coords.latitude,p.coords.longitude],15);toast('📍 Pindah ke lokasi Anda');},()=>toast('⚠️ Gagal mendapatkan lokasi'));}
+function dlMap(){
+  toast('📥 Menyiapkan screenshot...');
+  M.invalidateSize();
+  setTimeout(function(){
+    html2canvas(document.getElementById('map'),{useCORS:true,allowTaint:true,scale:1,width:document.getElementById('map').offsetWidth,height:document.getElementById('map').offsetHeight}).then(function(c){
+      const a=document.createElement('a');
+      a.download='PropMap_'+new Date().toISOString().slice(0,10)+'.jpg';
+      a.href=c.toDataURL('image/jpeg',0.82);
+      a.click();
+      toast('✅ Screenshot berhasil!');
+    }).catch(function(){toast('⚠️ Gagal screenshot');});
+  },400);
+}
+
+// ══════════════════════════════════
+// TOAST
+// ══════════════════════════════════
+let tt;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ══════════════════════════════════
+// AUTH CONFIG — ganti sesuai kebutuhan
+// ══════════════════════════════════
+const ADMIN_USERS = [
+  { username: 'admin', password: 'propmap2024' }
+  // Tambah user lain: { username: 'user2', password: 'pass2' }
+];
+
+function isAdmin() {
+  return sessionStorage.getItem('pm_role') === 'admin';
+}
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const match = ADMIN_USERS.find(x => x.username === u && x.password === p);
+  if (match) {
+    sessionStorage.setItem('pm_role', 'admin');
+    startApp(true);
+  } else {
+    document.getElementById('login-err').classList.add('show');
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+}
+
+function enterViewer() {
+  sessionStorage.setItem('pm_role', 'viewer');
+  startApp(false);
+}
+
+function logoutAdmin() {
+  if (!confirm('Logout dari mode Admin?')) return;
+  sessionStorage.removeItem('pm_role');
+  location.reload();
+}
+
+function startApp(adminMode) {
+  document.getElementById('login-screen').classList.add('h');
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  app.style.flexDirection = 'column';
+  app.style.height = '100vh';
+
+  if (adminMode) {
+    document.body.classList.remove('viewer-mode');
+    document.getElementById('admin-badge').style.display = 'flex';
+  } else {
+    document.body.classList.add('viewer-mode');
+    document.getElementById('admin-badge').style.display = 'none';
+  }
+
+  // Init map after app is visible (Leaflet needs visible container)
+  setTimeout(() => { M.invalidateSize(); }, 100);
+
+  // Load data
+  if(SHEET_URL){
+    fetch(SHEET_URL+'?action=getAll').then(r=>r.json()).then(d=>{DATA=d;filtered=[...DATA];applyAllFilters();}).catch(()=>{filtered=[...DATA];applyAllFilters();});
+  } else {
+    filtered=[...DATA]; applyAllFilters();
+  }
+}
+
+// ══════════════════════════════════
+// FOTO UPLOAD TO DRIVE
+// ══════════════════════════════════
+function onFotoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const wrap = document.getElementById('foto-upload-wrap');
+  const img  = document.getElementById('foto-preview-img');
+  wrap.style.display = 'flex';
+  img.src = URL.createObjectURL(file);
+  document.getElementById('foto-upload-status').textContent = '';
+  document.getElementById('btn-upload-drive').textContent = '☁️ Upload ke Google Drive';
+  document.getElementById('btn-upload-drive').disabled = false;
+}
+
+function uploadFotoDrive() {
+  if (!SHEET_URL) { toast('⚠️ SHEET_URL belum diisi!'); return; }
+  const file = document.getElementById('ffoto').files[0];
+  if (!file) { toast('⚠️ Pilih foto dulu!'); return; }
+
+  const btn    = document.getElementById('btn-upload-drive');
+  const status = document.getElementById('foto-upload-status');
+  btn.textContent = '⏳ Mengupload...';
+  btn.disabled = true;
+  status.textContent = 'Sedang upload ke Google Drive...';
+  status.style.color = 'var(--g600)';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result.split(',')[1];
+    fetch(SHEET_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'uploadFoto',
+        data: {
+          fileName: Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_'),
+          mimeType: file.type,
+          base64: base64
+        }
+      })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.url) {
+        document.getElementById('ffotourl').value = res.url;
+        previewFotoUrl(res.url);
+        status.textContent = '✅ Upload berhasil! URL otomatis terisi.';
+        status.style.color = '#2E7D32';
+        btn.textContent = '✅ Uploaded';
+        toast('✅ Foto berhasil diupload ke Drive!');
+      } else {
+        throw new Error(res.error || 'Upload gagal');
+      }
+    })
+    .catch(err => {
+      status.textContent = '⚠️ Gagal: ' + err.message;
+      status.style.color = '#C62828';
+      btn.textContent = '☁️ Coba Lagi';
+      btn.disabled = false;
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+window.onFotoSelected   = onFotoSelected;
+window.uploadFotoDrive  = uploadFotoDrive;
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Check existing session
+  const role = sessionStorage.getItem('pm_role');
+  if (role === 'admin') {
+    startApp(true);
+  } else if (role === 'viewer') {
+    startApp(false);
+  }
+  // else: stay on login screen
+
+  // Modal overlay click-to-close
+  document.querySelectorAll('.modal-ov').forEach(el => el.addEventListener('click', e => {
+    if(e.target === el) el.classList.remove('open');
+  }));
+
+  // Confirm dialog click-to-close
+  document.getElementById('confirm-dialog').addEventListener('click', e => {
+    if(e.target === document.getElementById('confirm-dialog')) closeConfirm();
+  });
+
+  // Foto preview
+  document.getElementById('ffoto')?.addEventListener('change', function(){
+    const p = document.getElementById('fprev'); p.innerHTML = '';
+    [...this.files].forEach(f => {
+      const u = URL.createObjectURL(f);
+      p.innerHTML += `<img src="${u}" style="width:68px;height:52px;object-fit:cover;border-radius:5px;border:1.5px solid var(--g200)">`;
+    });
+  });
+
+});
+
+window.doLogin        = doLogin;
+window.enterViewer    = enterViewer;
+window.logoutAdmin    = logoutAdmin;
+window.toggleAdv      = toggleAdv;
+window.openMod        = openMod;
+window.closeMod       = closeMod;
+window.swTab          = swTab;
+window.saveListing    = saveListing;
+window.saveComp       = saveComp;
+window.editListing    = editListing;
+window.confirmDelete  = confirmDelete;
+window.closeConfirm   = closeConfirm;
+window.startMapPick   = startMapPick;
+window.cancelMapPick  = cancelMapPick;
+window.flyTo          = flyTo;
+window.fitAll         = fitAll;
+window.toggleSidebar  = toggleSidebar;
+window.myLoc          = myLoc;
+window.dlMap          = dlMap;
+window.onGlobalSearch = onGlobalSearch;
+window.clearGlobalSearch = clearGlobalSearch;
+window.applyAdvanced  = applyAdvanced;
+window.resetAdvanced  = resetAdvanced;
+window.removeChip     = removeChip;
+window.setHarga       = setHarga;
+window.updateFilterBadge = updateFilterBadge;
+window.sortAndRender  = sortAndRender;
+window.previewFotoUrl = previewFotoUrl;
+</script>
+</body>
+</html>
